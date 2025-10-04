@@ -4,6 +4,7 @@ import { db, addUser } from '../app/lib/db';
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Sidebar from "../components/sidebar"
 
 
 
@@ -38,6 +39,7 @@ export default function Home() {
 
    return (
     <div>
+      <Sidebar />
     <div>
       <li><Link href="/sessions">Home Page</Link></li>
       <li><Link href="/sessions">Sessions</Link></li>

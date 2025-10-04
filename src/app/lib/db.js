@@ -7,9 +7,10 @@ export const db = typeof window !== 'undefined' ? new Dexie('MyAppDatabase') : n
 // Only configure Dexie if window exists
 if (typeof window !== 'undefined' && db) {
   db.version(1).stores({
-    users: '++id,name,age',
-    schedules: '++id,userId,date,time',
-    progress: '++id,userId,date,activity,completed'
+    users: '++userID,name,age,height,weight,health,preferredFrequency',
+    sessions: '++sessionID,userID,date,time,detailID',
+    progress: '++detailID,movementID,sessionDate,activity,totalSets,totalReps, goodRep, badRep',
+    movement: '++movementID, movementName, movementDescription, movementImage, movementVideo'
   });
 }
 

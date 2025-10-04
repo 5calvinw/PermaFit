@@ -2,7 +2,8 @@
 
 import { db, addUser } from '../app/lib/db';
 import { useEffect, useState } from "react";
-
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 
 
@@ -12,6 +13,8 @@ import { useEffect, useState } from "react";
 
 
 export default function Home() {
+
+   
 
   const [availability, setAvailability] = useState({
   Tuesday:   ["09:00"],
@@ -36,7 +39,10 @@ export default function Home() {
    return (
     <div>
     <div>
-      hi
+      <li><Link href="/sessions">Home Page</Link></li>
+      <li><Link href="/sessions">Sessions</Link></li>
+      <li><Link href="/schedules">Schedules</Link></li>
+          
     </div>
     <div>
       {schedule.map((item, i) => (
@@ -95,3 +101,11 @@ function pickSchedule(availability: any, sessions: number){
 
   return selectedSchedule;
 }
+
+function goToSessions() {
+    router.push("/sessions");
+  }
+
+  function goToSchedules() {
+    router.push("/schedules");
+  }

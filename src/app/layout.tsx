@@ -35,12 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      {/*
-        3. FIX: Apply manrope.variable to the body alongside the Geist variables. 
-           (Note: If Manrope is intended to be the PRIMARY font for the entire site,
-           you would typically set a default font-family in your global CSS or 
-           tailwind.config.js to point to one of these variables.)
-      */}
+     
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} antialiased`}
       >

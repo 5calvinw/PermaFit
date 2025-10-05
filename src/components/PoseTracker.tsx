@@ -3,58 +3,38 @@
 'use client';
 import React, { useEffect, useRef } from 'react';
 
-// Define types for the global functions we created in script.js
-// This helps TypeScript understand that these functions exist on the window object.
-declare global {
-  interface Window {
-    startPoseTracker: () => void;
-    stopPoseTracker: () => void;
-    isPoseTrackerActive: boolean;
-  }
-}
-
+// Define the component's props
 type PoseTrackerProps = {
-  exerciseName: string;
+  exerciseName: string; // e.g., 'bicep_curl', 'squat'
 };
 
 const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // This effect now handles the STARTING and STOPPING of the pose tracker
+  // This effect runs whenever the 'exerciseName' prop changes
   useEffect(() => {
-    // Check if the global functions from script.js are available
-    if (typeof window.startPoseTracker === 'function') {
-      window.startPoseTracker();
+    // The script.js file adds event listeners to buttons with the class 'exercise-btn'.
+    // To change the exercise, we can simulate a click on a hidden button that
+    // corresponds to the current exerciseName prop.
+    const buttonId = `btn-${exerciseName}`;
+    const targetButton = document.getElementById(buttonId) as HTMLButtonElement | null;
+
+    if (targetButton) {
+      console.log(`Switching exercise to: ${exerciseName}`);
+      targetButton.click(); // Programmatically click the button
     }
-
-    // This is a cleanup function that React runs when the component unmounts
-    return () => {
-      if (typeof window.stopPoseTracker === 'function') {
-        window.stopPoseTracker();
-      }
-    };
-  }, []); // The empty dependency array [] means this effect runs only ONCE when the component mounts.
-
-  // This effect remains to handle SWITCHING exercises while the tracker is active
-  useEffect(() => {
-    // Only try to switch if the tracker has been initialized
-    if (window.isPoseTrackerActive) {
-      const buttonId = `btn-${exerciseName}`;
-      const targetButton = document.getElementById(buttonId) as HTMLButtonElement | null;
-
-      if (targetButton) {
-        console.log(`Switching exercise to: ${exerciseName}`);
-        targetButton.click();
-      }
-    }
-  }, [exerciseName]);
+  }, [exerciseName]); // This effect re-runs ONLY when exerciseName changes
 
   return (
     <div className="relative w-full aspect-video rounded-lg overflow-hidden border">
+      {/* The script.js file looks for these specific class names */}
       <video ref={videoRef} className="input_video hidden" width="1280" height="720"></video>
       <canvas ref={canvasRef} className="output_canvas w-full h-full" width="1280" height="720"></canvas>
 
+      {/* The 'controls' div and buttons are required by script.js for its event listeners.
+        We can hide them since the main UI in page.tsx is handling the selection.
+      */}
       <div className="controls hidden">
         <button id="btn-bicep_curl" className="exercise-btn">
           Bicep Curl
@@ -68,6 +48,7 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName }) => {
         <button id="btn-glute_bridge" className="exercise-btn">
           Glute Bridge
         </button>
+        {/* Add buttons for any other exercises defined in EXERCISE_CONFIG */}
         <button id="btn-reset">Reset</button>
       </div>
     </div>

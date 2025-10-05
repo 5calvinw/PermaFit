@@ -17,7 +17,7 @@ const SidebarStatic: React.FC = () => {
   return (
     <>
       {/* Sidebar */}
-      <div className="fixed top-0 left-0 h-screen bg-white shadow-xl w-72 p-8 flex flex-col gap-8">
+      <div className="fixed h-screen bg-white shadow-xl w-72 p-8 pr-0 flex flex-col gap-8">
         <div className="flex justify-start items-center pl-4 pr-2">
           <FaPerson className="text-[#487FB2] text-3xl" />
           <div className="flex justify-start items-center px-4 font-bold">
@@ -26,7 +26,7 @@ const SidebarStatic: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 w-full">
+        <div className="flex flex-col gap-4 w-full">
           <NavButton name="Home" icon={<IoHomeSharp />} path={HOME_PATH} currentPath={currentPath} />
           <NavButton name="Workout Schedule" icon={<FaCalendarAlt />} path={SCHEDULES_PATH} currentPath={currentPath} />
           <NavButton name="Workout Session" icon={<FaRegClock />} path={SESSIONS_PATH} currentPath={currentPath} />
@@ -54,7 +54,7 @@ const NavButton: React.FC<NavButtonProps> = ({ name, icon, path, currentPath }) 
       <div>
         <div className={`${commonClasses} ${isActive ? activeClasses : inactiveClasses}`}>
           <span className="text-2xl">{icon}</span>
-          <h2 className="text-md font-bold ">{name}</h2>
+          <span className=" font-bold ">{name}</span>
         </div>
       </div>
     </Link>

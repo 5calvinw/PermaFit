@@ -9,8 +9,8 @@ if (typeof window !== 'undefined' && db) {
   db.version(1).stores({
     users: '++userID,name,age,height,weight,health,preferredFrequency',
     sessions: '++sessionID,day,time,*detailID',
-    details: '++detailID,movementID,sessionDate,activity,totalSets,totalReps, goodRep, badRep',
-    movement: '++movementID, movementName, movementDescription, movementImage, movementVideo'
+    details: '++detailID,movementID,totalSets,totalReps, goodRep, badRep',
+    movement: '++movementID, movementName, configKey, movementDescription, movementImage, movementVideo'
   });
 
     const mySession = [
@@ -31,36 +31,77 @@ if (typeof window !== 'undefined' && db) {
        },  
       ];
 
+      const dummyDetails = [
+        {
 
+    movementID: 1,
+    totalSets: 3,
+    reps: 12,
+    goodRep: 0,
+    badRep: 0
+  },
+  {
+
+    movementID: 2,
+    totalSets: 3,
+    totalReps: 15,
+    goodRep: 0,
+    badRep: 0
+
+    },
+  {
+   
+    movementID: 3,
+    totalSets: 3,
+    totalReps: 10,
+    goodRep: 0,
+    badRep: 0
+    
+  },
+  {
+
+    movementID: 4,
+    totalSets: 3,
+    totalReps: 12,
+    goodRep: 0,
+    badRep: 0
+    
+  },
+      ]
 
     const initialMovements = [
     {
       movementName: 'Bicep Curl',
+      configKey: 'bicep_curl',
       movementDescription: 'bicep curl blalbalblablaballba',
       movementImage: '/',
       movementVideo: '/'
     },
     {
       movementName: 'Squat',
+      configKey: 'squat',
       movementDescription: 'Squat blalbalblablaballba',
       movementImage: '/',
       movementVideo: '/'
     },
     {
       movementName: 'Wall Pushup',
+      configKey: 'wall_push_up',
       movementDescription: 'Wall Pushup blalbalblablaballba',
       movementImage: '/',
       movementVideo: '/'
     },
     {
-      movementName: 'movement 4',
-      movementDescription: 'movement 4 blalbalblablaballba',
+      movementName: 'Glute Bridges',
+      configKey: 'glute_bridge',
+      movementDescription: 'Glute Bridges blalbalblablaballba',
       movementImage: '/',
       movementVideo: '/'
     },
     {
-      movementName: 'movement 5',
-      movementDescription: 'movement 5 blalbalblablaballba',
+      movementName: 'Seated Leg Raise',
+      configKey: 'seated_leg_raise',
+      movementDescription: 'Seated Leg Raise blalbalblablaballba',
       movementImage: '/',
       movementVideo: '/'
     },
@@ -72,6 +113,7 @@ if (typeof window !== 'undefined' && db) {
       // Use bulkAdd() to efficiently add all initial movements.
       await db.movement.bulkAdd(initialMovements);
       await db.sessions.bulkAdd(mySession);
+      await db.details.bulkAdd(dummyDetails);
       console.log('Initial movements have been successfully added.');
     } catch (error) {
       console.error(`Failed to populate database: ${error}`);

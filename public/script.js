@@ -123,6 +123,7 @@ const EXERCISE_CONFIG = {
       {
         check_type: 'positional',
         landmarks: [12, 28], // R_Shoulder, R_Ankle
+        // CORRECTED: Checks if the y-pixel difference is greater than 40px.
         condition: (shoulder, ankle) => Math.abs(shoulder.y - ankle.y) > 40,
         feedback: 'KEEP SHOULDERS & FEET ON GROUND',
       },
@@ -194,12 +195,14 @@ class Exercise {
     this.angle_range = config.angle_range;
     this.type = config.progress_type;
     this.form_checks = config.form_checks || [];
+
     const timing = config.timing || {};
     this.concentric_time = timing.concentric || 3;
     this.hold_time = timing.hold || 1;
     this.eccentric_time = timing.eccentric || 3;
     this.time_tolerance = timing.tolerance || 0.5;
     this.total_rep_time = this.concentric_time + this.hold_time + this.eccentric_time;
+
     this.good_reps = 0;
     this.bad_reps = 0;
     this.stage = 'down';
@@ -209,6 +212,7 @@ class Exercise {
     this.speed_feedback = 'START';
     this.rep_timing_is_good = true;
   }
+
   _calculate_angle(p1, p2, p3) {
     const radians = Math.atan2(p3.y - p2.y, p3.x - p2.x) - Math.atan2(p1.y - p2.y, p1.x - p2.x);
     let angle = Math.abs((radians * 180.0) / Math.PI);
@@ -217,9 +221,12 @@ class Exercise {
     }
     return angle;
   }
+
+  // Equivalent of numpy.interp
   _interp(x, in_min, in_max, out_min, out_max) {
     return ((x - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min;
   }
+
   _calculate_percentage(angle) {
     let percentage;
     if (this.type === 'inverse') {
@@ -227,11 +234,14 @@ class Exercise {
     } else {
       percentage = this._interp(angle, this.angle_range[0], this.angle_range[1], 100, 0);
     }
+    // Clamp the value between 0 and 100
     return Math.max(0, Math.min(100, percentage));
   }
+
   update(lmList) {
     let pace_progress = 0.0;
     const inter_stage_warnings = ['TOO FAST', 'TOO SLOW', 'HOLD AT TOP'];
+
     let angle;
     if (Array.isArray(this.landmarks[0])) {
       const angle1 = this._calculate_angle(
@@ -248,6 +258,7 @@ class Exercise {
     } else {
       angle = this._calculate_angle(lmList[this.landmarks[0]], lmList[this.landmarks[1]], lmList[this.landmarks[2]]);
     }
+
     const per = this._calculate_percentage(angle);
     const bar = this._interp(
       per,
@@ -256,10 +267,12 @@ class Exercise {
       UI_CONFIG.movement_bar.y + UI_CONFIG.movement_bar.h,
       UI_CONFIG.movement_bar.y
     );
+
     let current_form_is_good = true;
     this.form_feedback = 'GOOD';
     for (const check of this.form_checks) {
       const check_type = check.check_type || 'angle';
+
       if (check_type === 'visibility') {
         if (!check_body_visibility(lmList, check.landmarks)) {
           this.form_feedback = check.feedback;
@@ -276,6 +289,7 @@ class Exercise {
           }
         }
       } else {
+        // 'angle' check
         const check_angle = this._calculate_angle(
           lmList[check.landmarks[0]],
           lmList[check.landmarks[1]],
@@ -288,17 +302,23 @@ class Exercise {
         }
       }
     }
+
     const current_time = Date.now() / 1000;
     const elapsed_stage_time = current_time - this.stage_start_time;
+
     const is_moving = ['going_up', 'hold', 'going_down'].includes(this.stage);
     if ((!current_form_is_good && is_moving) || (per <= 5 && ['going_up', 'hold'].includes(this.stage))) {
       this.stage = 'down';
       this.speed_feedback = 'REP RESET';
       this.feedback_set_time = current_time;
     }
+
+    // State machine logic
     const final_rep_messages = ['GOOD REP!', 'BAD TIMING', 'REP RESET', ...inter_stage_warnings];
+
     if (this.stage === 'down') {
       if (final_rep_messages.includes(this.speed_feedback) && current_time - this.feedback_set_time < 1.0) {
+        // Keep showing final rep message
       } else {
         this.speed_feedback = 'LIFT UP';
       }
@@ -309,6 +329,7 @@ class Exercise {
       }
     } else if (this.stage === 'going_up') {
       if (inter_stage_warnings.includes(this.speed_feedback) && current_time - this.feedback_set_time < 0.5) {
+        // Keep showing warning
       } else {
         this.speed_feedback = 'GO';
       }
@@ -328,6 +349,7 @@ class Exercise {
       }
     } else if (this.stage === 'hold') {
       if (inter_stage_warnings.includes(this.speed_feedback) && current_time - this.feedback_set_time < 0.5) {
+        // Keep showing warning
       } else {
         this.speed_feedback = 'HOLD';
       }
@@ -346,6 +368,7 @@ class Exercise {
       }
     } else if (this.stage === 'going_down') {
       if (inter_stage_warnings.includes(this.speed_feedback) && current_time - this.feedback_set_time < 0.5) {
+        // Keep showing warning
       } else {
         this.speed_feedback = 'BACK SLOWLY';
       }
@@ -370,6 +393,7 @@ class Exercise {
         this.stage = 'down';
       }
     }
+
     pace_progress = Math.min(pace_progress, 1.0);
     return {
       angle,
@@ -397,6 +421,7 @@ function check_body_visibility(lmList, required_ids, threshold = 0.7) {
   }
   return true;
 }
+
 function draw_visibility_prompt(ctx, text) {
   const { colors } = UI_CONFIG;
   ctx.fillStyle = colors.bg;
@@ -408,11 +433,14 @@ function draw_visibility_prompt(ctx, text) {
   ctx.font = 'bold 60px Arial';
   ctx.fillText(text, 640, 430);
 }
+
 function draw_feedback_box(ctx, form_feedback, speed_feedback) {
   const { x, y, w, h } = UI_CONFIG.feedback_box;
   const { colors } = UI_CONFIG;
+
   ctx.fillStyle = colors.bg;
   ctx.fillRect(x, y, w, h);
+
   const form_color = form_feedback === 'GOOD' ? colors.good : colors.bad;
   const warning_msgs = ['TOO FAST', 'TOO SLOW', 'REP RESET', 'HOLD AT TOP', 'BAD TIMING'];
   let speed_color = colors.neutral;
@@ -421,6 +449,7 @@ function draw_feedback_box(ctx, form_feedback, speed_feedback) {
   } else if (speed_feedback === 'GOOD REP!') {
     speed_color = colors.good;
   }
+
   ctx.textAlign = 'left';
   ctx.font = 'bold 40px Arial';
   ctx.fillStyle = form_color;
@@ -428,64 +457,83 @@ function draw_feedback_box(ctx, form_feedback, speed_feedback) {
   ctx.fillStyle = speed_color;
   ctx.fillText(`SPEED: ${speed_feedback}`, x + 20, y + 85);
 }
+
 function draw_pace_bar(ctx, progress, handler) {
   const { x, y, w, h } = UI_CONFIG.pace_bar;
   const { colors } = UI_CONFIG;
+
   ctx.strokeStyle = colors.neutral;
   ctx.lineWidth = 3;
   ctx.strokeRect(x, y, w, h);
+
   const filled_w = w * progress;
   ctx.fillStyle = colors.good;
   ctx.fillRect(x, y, filled_w, h);
+
   const total_time = handler.total_rep_time;
   if (total_time > 0) {
     ctx.fillStyle = colors.text_dark_bg;
     ctx.lineWidth = 4;
     const concentric_end_x = x + w * (handler.concentric_time / total_time);
     const hold_end_x = concentric_end_x + w * (handler.hold_time / total_time);
+
     ctx.beginPath();
     ctx.moveTo(concentric_end_x, y);
     ctx.lineTo(concentric_end_x, y + h);
     ctx.stroke();
+
     ctx.beginPath();
     ctx.moveTo(hold_end_x, y);
     ctx.lineTo(hold_end_x, y + h);
     ctx.stroke();
   }
 }
+
 function draw_movement_bar(ctx, percentage, bar_value, form_is_good) {
   const { x, y, w, h } = UI_CONFIG.movement_bar;
   const color = form_is_good ? UI_CONFIG.colors.good : UI_CONFIG.colors.bad;
+
   ctx.strokeStyle = color;
   ctx.lineWidth = 3;
   ctx.strokeRect(x, y, w, h);
+
   ctx.fillStyle = color;
   ctx.fillRect(x, bar_value, w, y + h - bar_value);
+
   ctx.font = 'bold 50px Arial';
   ctx.textAlign = 'left';
   ctx.fillStyle = color;
   ctx.fillText(`${Math.round(percentage)}%`, x, y - 25);
 }
+
 function draw_rep_counter(ctx, good_reps, bad_reps) {
   const { x, y, w, h } = UI_CONFIG.rep_counter_box;
   const { colors } = UI_CONFIG;
+
   ctx.fillStyle = colors.bg;
   ctx.fillRect(x, y, w, h);
+
   ctx.textAlign = 'left';
+
   ctx.font = 'bold 40px Arial';
   ctx.fillStyle = colors.good;
   ctx.fillText('GOOD', x + 25, y + 50);
+
   ctx.font = 'bold 100px Arial';
   ctx.fillText(String(good_reps).padStart(2, '0'), x + 45, y + 150);
+
   ctx.font = 'bold 40px Arial';
   ctx.fillStyle = colors.bad;
   ctx.fillText('BAD', x + 35, y + 200);
+
   ctx.font = 'bold 60px Arial';
   ctx.fillText(String(bad_reps).padStart(2, '0'), x + 45, y + 260);
 }
+
 function draw_header_info(ctx, exercise_name) {
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(0, 0, 1280, 120);
+
   ctx.fillStyle = UI_CONFIG.colors.neutral;
   ctx.font = 'bold 30px Arial';
   ctx.textAlign = 'left';
@@ -493,21 +541,29 @@ function draw_header_info(ctx, exercise_name) {
   ctx.font = '25px Arial';
   ctx.fillText('Use buttons to change exercise or reset', 50, 90);
 }
+
 function draw_countdown(ctx, remaining_time) {
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
   ctx.fillRect(0, 0, 1280, 720);
+
   ctx.fillStyle = UI_CONFIG.colors.bad;
   ctx.font = 'bold 100px Arial';
   ctx.textAlign = 'center';
   ctx.fillText('GET READY!', 640, 300);
+
   ctx.font = 'bold 150px Arial';
   ctx.fillText(remaining_time, 640, 450);
 }
+
 function draw_active_landmarks(ctx, lmList, landmarkIds, angle) {
+  // Check if the required landmarks are available
   if (!landmarkIds.every((id) => id < lmList.length)) {
     return;
   }
+
   const [p1, p2, p3] = landmarkIds.map((id) => lmList[id]);
+
+  // Draw the connecting lines
   ctx.strokeStyle = 'white';
   ctx.lineWidth = 5;
   ctx.beginPath();
@@ -515,12 +571,16 @@ function draw_active_landmarks(ctx, lmList, landmarkIds, angle) {
   ctx.lineTo(p2.x, p2.y);
   ctx.lineTo(p3.x, p3.y);
   ctx.stroke();
-  ctx.fillStyle = '#ffaa00';
+
+  // Draw the landmark circles
+  ctx.fillStyle = '#ffaa00'; // An orange color
   [p1, p2, p3].forEach((p) => {
     ctx.beginPath();
     ctx.arc(p.x, p.y, 10, 0, 2 * Math.PI);
     ctx.fill();
   });
+
+  // Draw the angle text near the middle landmark (p2)
   ctx.fillStyle = 'white';
   ctx.font = 'bold 40px Arial';
   ctx.textAlign = 'left';
@@ -531,179 +591,121 @@ function draw_active_landmarks(ctx, lmList, landmarkIds, angle) {
 //                        MAIN APPLICATION
 // ===============================================================
 
-let pose;
-let camera;
-let exercise_handler;
-let program_state;
+const videoElement = document.querySelector('.input_video');
+const canvasElement = document.querySelector('.output_canvas');
+const canvasCtx = canvasElement.getContext('2d');
+const controlsElement = document.querySelector('.controls');
+
 let current_exercise_name = 'bicep_curl';
+let exercise_handler = new Exercise(EXERCISE_CONFIG[current_exercise_name]);
+let program_state = 'WAITING_FOR_BODY';
 const countdown_duration = 5;
 let countdown_start_time = 0;
 
-window.startPoseTracker = () => {
-  if (window.isPoseTrackerActive) return;
-  console.log('Starting Pose Tracker...');
+function onResults(results) {
+  canvasCtx.save();
+  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+  canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-  const videoElement = document.querySelector('.input_video');
-  const canvasElement = document.querySelector('.output_canvas');
-  const canvasCtx = canvasElement.getContext('2d');
-  const controlsElement = document.querySelector('.controls');
+  const lmList = results.poseLandmarks
+    ? results.poseLandmarks.map((lm) => ({
+        x: lm.x * canvasElement.width,
+        y: lm.y * canvasElement.height,
+        visibility: lm.visibility,
+      }))
+    : [];
 
-  if (!videoElement || !canvasElement || !controlsElement) {
-    console.error('Required DOM elements not found.');
-    return;
-  }
-
-  const onResults = (results) => {
-    if (!canvasCtx || !canvasElement) return;
-
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-    const lmList = results.poseLandmarks
-      ? results.poseLandmarks.map((lm) => ({
-          x: lm.x * canvasElement.width,
-          y: lm.y * canvasElement.height,
-          visibility: lm.visibility,
-        }))
-      : [];
-
-    if (program_state === 'WAITING_FOR_BODY') {
-      draw_header_info(canvasCtx, current_exercise_name);
-      const visibility_config = EXERCISE_CONFIG[current_exercise_name].visibility_check;
-      if (visibility_config) {
-        const is_visible = check_body_visibility(lmList, visibility_config.landmarks);
-        if (is_visible) {
-          program_state = 'COUNTDOWN';
-          countdown_start_time = Date.now() / 1000;
-        } else {
-          draw_visibility_prompt(canvasCtx, visibility_config.feedback);
-        }
-      } else {
+  if (program_state === 'WAITING_FOR_BODY') {
+    draw_header_info(canvasCtx, current_exercise_name);
+    const visibility_config = EXERCISE_CONFIG[current_exercise_name].visibility_check;
+    if (visibility_config) {
+      const is_visible = check_body_visibility(lmList, visibility_config.landmarks);
+      if (is_visible) {
         program_state = 'COUNTDOWN';
         countdown_start_time = Date.now() / 1000;
-      }
-    } else if (program_state === 'COUNTDOWN') {
-      draw_header_info(canvasCtx, current_exercise_name);
-      const time_since_start = Date.now() / 1000 - countdown_start_time;
-      if (time_since_start >= countdown_duration) {
-        program_state = 'TRACKING';
       } else {
-        const remaining_time = Math.ceil(countdown_duration - time_since_start);
-        draw_countdown(canvasCtx, remaining_time);
+        draw_visibility_prompt(canvasCtx, visibility_config.feedback);
       }
-    } else if (program_state === 'TRACKING') {
-      let ui_data = {
-        bar: UI_CONFIG.movement_bar.y + UI_CONFIG.movement_bar.h,
-        per: 0,
-        pace_progress: 0.0,
-        form_feedback: 'NO PERSON DETECTED',
-        speed_feedback: '',
-        good_reps: exercise_handler.good_reps,
-        bad_reps: exercise_handler.bad_reps,
-      };
-
-      if (lmList.length !== 0) {
-        ui_data = exercise_handler.update(lmList);
-        draw_active_landmarks(canvasCtx, lmList, exercise_handler.landmarks, ui_data.angle);
-      }
-
-      draw_feedback_box(canvasCtx, ui_data.form_feedback, ui_data.speed_feedback);
-      draw_pace_bar(canvasCtx, ui_data.pace_progress, exercise_handler);
-      draw_movement_bar(canvasCtx, ui_data.per, ui_data.bar, ui_data.form_feedback === 'GOOD');
-      draw_rep_counter(canvasCtx, ui_data.good_reps, ui_data.bad_reps);
-      draw_header_info(canvasCtx, current_exercise_name);
+    } else {
+      program_state = 'COUNTDOWN';
+      countdown_start_time = Date.now() / 1000;
     }
-    canvasCtx.restore();
-  };
+  } else if (program_state === 'COUNTDOWN') {
+    draw_header_info(canvasCtx, current_exercise_name);
+    const time_since_start = Date.now() / 1000 - countdown_start_time;
+    if (time_since_start >= countdown_duration) {
+      program_state = 'TRACKING';
+    } else {
+      const remaining_time = Math.ceil(countdown_duration - time_since_start);
+      draw_countdown(canvasCtx, remaining_time);
+    }
+  } else if (program_state === 'TRACKING') {
+    let ui_data = {
+      bar: UI_CONFIG.movement_bar.y + UI_CONFIG.movement_bar.h,
+      per: 0,
+      pace_progress: 0.0,
+      form_feedback: 'NO PERSON DETECTED',
+      speed_feedback: '',
+      good_reps: exercise_handler.good_reps,
+      bad_reps: exercise_handler.bad_reps,
+    };
 
-  const resetState = (new_exercise) => {
-    current_exercise_name = new_exercise || current_exercise_name;
+    if (lmList.length !== 0) {
+      ui_data = exercise_handler.update(lmList);
+      draw_active_landmarks(canvasCtx, lmList, exercise_handler.landmarks, ui_data.angle);
+    }
+
+    draw_feedback_box(canvasCtx, ui_data.form_feedback, ui_data.speed_feedback);
+    draw_pace_bar(canvasCtx, ui_data.pace_progress, exercise_handler);
+    draw_movement_bar(canvasCtx, ui_data.per, ui_data.bar, ui_data.form_feedback === 'GOOD');
+    draw_rep_counter(canvasCtx, ui_data.good_reps, ui_data.bad_reps);
+    draw_header_info(canvasCtx, current_exercise_name);
+  }
+  canvasCtx.restore();
+}
+
+// Initialize MediaPipe Pose
+const pose = new Pose({
+  locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+});
+pose.setOptions({
+  modelComplexity: 1,
+  smoothLandmarks: true,
+  enableSegmentation: true,
+  smoothSegmentation: true,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5,
+});
+pose.onResults(onResults);
+
+// Initialize Camera
+const camera = new Camera(videoElement, {
+  onFrame: async () => {
+    await pose.send({ image: videoElement });
+  },
+  width: 1280,
+  height: 720,
+});
+camera.start();
+
+// Event Listeners for UI buttons
+controlsElement.addEventListener('click', (e) => {
+  if (e.target.tagName !== 'BUTTON') return;
+
+  const resetState = () => {
     exercise_handler = new Exercise(EXERCISE_CONFIG[current_exercise_name]);
     program_state = 'WAITING_FOR_BODY';
-    console.log(`State reset for exercise: ${current_exercise_name}`);
   };
 
-  const handleButtonClick = (e) => {
-    if (e.target.tagName !== 'BUTTON') return;
-
-    if (e.target.id === 'btn-reset') {
+  if (e.target.id === 'btn-reset') {
+    resetState();
+  } else if (e.target.classList.contains('exercise-btn')) {
+    const new_exercise = e.target.id.replace('btn-', '');
+    if (new_exercise !== current_exercise_name) {
+      current_exercise_name = new_exercise;
+      document.querySelectorAll('.exercise-btn').forEach((btn) => btn.classList.remove('active'));
+      e.target.classList.add('active');
       resetState();
-    } else if (e.target.classList.contains('exercise-btn')) {
-      const new_exercise = e.target.id.replace('btn-', '');
-      if (new_exercise !== current_exercise_name) {
-        document.querySelectorAll('.exercise-btn').forEach((btn) => btn.classList.remove('active'));
-        e.target.classList.add('active');
-        resetState(new_exercise);
-      }
     }
-  };
-
-  pose = new Pose({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
-  });
-  pose.setOptions({
-    modelComplexity: 1,
-    smoothLandmarks: true,
-    enableSegmentation: true,
-    smoothSegmentation: true,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5,
-  });
-  pose.onResults(onResults);
-
-  camera = new Camera(videoElement, {
-    onFrame: async () => {
-      await pose.send({ image: videoElement });
-    },
-    width: 1280,
-    height: 720,
-  });
-  camera.start();
-
-  controlsElement.addEventListener('click', handleButtonClick);
-
-  window.poseTrackerInstances = { pose, camera, listener: handleButtonClick };
-
-  resetState(current_exercise_name);
-  window.isPoseTrackerActive = true;
-};
-
-window.stopPoseTracker = () => {
-  if (!window.isPoseTrackerActive || !window.poseTrackerInstances) return;
-  console.log('Stopping Pose Tracker...');
-
-  const { pose, listener } = window.poseTrackerInstances;
-  const controlsElement = document.querySelector('.controls');
-  const videoElement = document.querySelector('.input_video');
-
-  // --- CORRECTED SECTION ---
-  // Stop the camera stream by stopping all of its tracks.
-  if (videoElement && videoElement.srcObject) {
-    const stream = videoElement.srcObject;
-    const tracks = stream.getTracks();
-    tracks.forEach((track) => track.stop()); // This turns off the camera light
-    videoElement.srcObject = null;
   }
-
-  // Close the pose model instance
-  if (pose) {
-    pose.close();
-  }
-
-  // Remove the event listener
-  if (controlsElement && listener) {
-    controlsElement.removeEventListener('click', listener);
-  }
-
-  // Clear the canvas
-  const canvasElement = document.querySelector('.output_canvas');
-  if (canvasElement) {
-    const canvasCtx = canvasElement.getContext('2d');
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-  }
-
-  // Reset state
-  window.isPoseTrackerActive = false;
-  window.poseTrackerInstances = null;
-};
+});

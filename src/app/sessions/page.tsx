@@ -75,58 +75,28 @@ const workoutData: Exercise[] = [
 
 const WorkoutSession: React.FC = () => {
   const [selectedExerciseId, setSelectedExerciseId] = React.useState<number>(1);
-  const [isTracking, setIsTracking] = React.useState(false); // State to control the tracker
-
   const selectedExercise = workoutData.find((ex) => ex.id === selectedExerciseId) || workoutData[0];
-
-  // Effect to reset the tracker when the selected exercise changes
-  React.useEffect(() => {
-    setIsTracking(false);
-  }, [selectedExerciseId]);
 
   return (
     <div className="flex min-h-screen bg-slate-100">
       <Sidebar />
       <main className="flex-1 p-8 font-sans ml-72">
-        <div className="flex flex-col gap-8">
-          {/* Page Header Card */}
-          <section className="bg-white p-6 rounded-lg shadow-md">
-            <h1 className="text-3xl font-bold text-gray-800">Workout Session 1</h1>
-            <p className="text-md text-gray-500 mt-1">Sunday, 5 October 2025</p>
-          </section>
+        {/* Page Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">Workout Session 1</h1>
+          <p className="text-md text-gray-500">Sunday, 5 October 2025</p>
+        </div>
 
+        <div className="flex flex-col gap-8">
           {/* Top Card: Form Tracker */}
           <section className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-700">Form Tracker</h2>
-                <p className="text-gray-600">
-                  Current Movement: <span className="font-medium">{selectedExercise.name}</span>
-                </p>
-              </div>
-            </div>
+            <h2 className="text-xl font-semibold mb-4 text-gray-700">Form Tracker</h2>
+            <p className="text-gray-600 mb-4">
+              Current Movement: <span className="font-medium">{selectedExercise.name}</span>
+            </p>
 
-            {/* Conditional rendering for the tracker */}
-            <div className="w-full bg-gray-200 rounded-md aspect-video flex justify-center items-center">
-              {isTracking ? (
-                <PoseTracker exerciseName={selectedExercise.configKey} />
-              ) : (
-                <div className="text-center text-gray-500">
-                  <p>Click the button below to start tracking your form.</p>
-                </div>
-              )}
-            </div>
-
-            {!isTracking && (
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={() => setIsTracking(true)}
-                  className="px-5 py-2 border border-green-400 text-green-500 font-semibold rounded-lg hover:bg-green-500 hover:text-white transition-all duration-200"
-                >
-                  Start Movement
-                </button>
-              </div>
-            )}
+            {/* The PoseTracker component is now integrated and receives the exercise key */}
+            <PoseTracker exerciseName={selectedExercise.configKey} />
           </section>
 
           {/* Bottom Section: Workout Details */}
@@ -138,10 +108,11 @@ const WorkoutSession: React.FC = () => {
                 {workoutData.map((exercise) => (
                   <div
                     key={exercise.id}
-                    className={`p-4 rounded-md border-2 transition-all duration-200 ${
+                    onClick={() => setSelectedExerciseId(exercise.id)}
+                    className={`p-4 rounded-md cursor-pointer border-2 transition-all duration-200 ${
                       selectedExerciseId === exercise.id
                         ? 'bg-blue-50 border-blue-500 shadow-sm'
-                        : 'bg-white border-gray-200'
+                        : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                     }`}
                   >
                     <p className="font-semibold text-blue-600">{exercise.name}</p>

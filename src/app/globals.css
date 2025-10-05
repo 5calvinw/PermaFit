@@ -7,6 +7,7 @@
   --foreground: #171717;
 }
 
+
 /* NOTE: '@theme inline' is a custom or non-standard CSS block, likely 
   for a specific library or framework setup. Assuming you want to keep it 
   for your Geist variables. 
@@ -28,9 +29,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  /* 💡 FIX: Set Manrope as the primary font using its CSS variable.
-    This works because you applied '--font-manrope' to the <body> element in 
-    your RootLayout.
-  */
   font-family: var(--font-manrope), sans-serif;
 }

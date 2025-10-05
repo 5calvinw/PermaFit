@@ -35,14 +35,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-           {' '}
-      {/*
-        3. FIX: Apply manrope.variable to the body alongside the Geist variables. 
-           (Note: If Manrope is intended to be the PRIMARY font for the entire site,
-           you would typically set a default font-family in your global CSS or 
-           tailwind.config.js to point to one of these variables.)
-      */}
-           {' '}
       <body className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} antialiased`}>
                 {children}      {/* Load MediaPipe scripts from CDN */}
         <Script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossOrigin="anonymous" />
@@ -52,18 +44,6 @@ export default function RootLayout({
         {/* Load your local script AFTER the dependencies */}
         <Script src="/script.js" strategy="lazyOnload" />
       </body>
-         {' '}
     </html>
   );
-}
-  return (
-    <html lang="en">
-     
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} antialiased`}
-      >
-        {children}
-      </body>
-    </html>
-  );
 }

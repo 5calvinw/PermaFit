@@ -16,7 +16,7 @@ const SidebarStatic: React.FC = () => {
 
   return (
     <>
-      {/* Sidebar */}
+
       <div className="fixed h-screen bg-white shadow-xl w-72 p-8 pr-0 flex flex-col gap-8">
         <div className="flex justify-start items-center pl-4 pr-2">
           <FaPerson className="text-[#487FB2] text-3xl" />

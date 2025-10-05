@@ -1,49 +1,62 @@
-// In components/PoseTracker.tsx
-
 'use client';
 import React, { useEffect, useRef } from 'react';
 
+// Define a type for a single exercise in the plan
+type ExercisePlan = {
+  id: number;
+  name: string;
+  configKey: string;
+  sets: number;
+  reps: number;
+};
+
 // Define types for the global functions we created in script.js
-// This helps TypeScript understand that these functions exist on the window object.
 declare global {
   interface Window {
-    startPoseTracker: () => void;
+    startPoseTracker: (videoEl: HTMLVideoElement, canvasEl: HTMLCanvasElement, controlsEl: HTMLDivElement) => void;
     stopPoseTracker: () => void;
     isPoseTrackerActive: boolean;
+    setWorkoutPlan: (plan: any[]) => void;
   }
 }
 
 type PoseTrackerProps = {
   exerciseName: string;
+  workoutPlan: ExercisePlan[]; // Pass the whole plan
 };
 
-const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName }) => {
+const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName, workoutPlan }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null); // ADDED: Ref for the controls div
 
-  // This effect now handles the STARTING and STOPPING of the pose tracker
+  // MODIFIED: This useEffect hook is now much more reliable
   useEffect(() => {
-    // Check if the global functions from script.js are available
-    if (typeof window.startPoseTracker === 'function') {
-      window.startPoseTracker();
+    if (typeof window.setWorkoutPlan === 'function') {
+      window.setWorkoutPlan(workoutPlan);
     }
 
-    // This is a cleanup function that React runs when the component unmounts
+    // Pass the DOM elements directly from the refs
+    if (videoRef.current && canvasRef.current && controlsRef.current) {
+      if (typeof window.startPoseTracker === 'function') {
+        window.startPoseTracker(videoRef.current, canvasRef.current, controlsRef.current);
+      }
+    }
+
     return () => {
       if (typeof window.stopPoseTracker === 'function') {
         window.stopPoseTracker();
       }
     };
-  }, []); // The empty dependency array [] means this effect runs only ONCE when the component mounts.
+  }, []);
 
   // This effect remains to handle SWITCHING exercises while the tracker is active
   useEffect(() => {
-    // Only try to switch if the tracker has been initialized
     if (window.isPoseTrackerActive) {
       const buttonId = `btn-${exerciseName}`;
       const targetButton = document.getElementById(buttonId) as HTMLButtonElement | null;
 
-      if (targetButton) {
+      if (targetButton && !targetButton.classList.contains('active')) {
         console.log(`Switching exercise to: ${exerciseName}`);
         targetButton.click();
       }
@@ -55,7 +68,8 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName }) => {
       <video ref={videoRef} className="input_video hidden" width="1280" height="720"></video>
       <canvas ref={canvasRef} className="output_canvas w-full h-full" width="1280" height="720"></canvas>
 
-      <div className="controls hidden">
+      {/* ADDED: Attach the ref to the controls div */}
+      <div ref={controlsRef} className="controls hidden">
         <button id="btn-bicep_curl" className="exercise-btn">
           Bicep Curl
         </button>
@@ -68,7 +82,6 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName }) => {
         <button id="btn-glute_bridge" className="exercise-btn">
           Glute Bridge
         </button>
-        <button id="btn-reset">Reset</button>
       </div>
     </div>
   );

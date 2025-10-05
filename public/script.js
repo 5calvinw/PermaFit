@@ -483,15 +483,28 @@ function draw_rep_counter(ctx, good_reps, bad_reps) {
   ctx.font = 'bold 60px Arial';
   ctx.fillText(String(bad_reps).padStart(2, '0'), x + 45, y + 260);
 }
-function draw_header_info(ctx, exercise_name) {
+function draw_rest_screen(ctx, remaining_time) {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fillRect(0, 0, 1280, 720);
+  ctx.fillStyle = UI_CONFIG.colors.good;
+  ctx.font = 'bold 100px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('REST', 640, 300);
+  ctx.font = 'bold 150px Arial';
+  ctx.fillText(remaining_time, 640, 450);
+}
+function draw_header_info(ctx, exercise_name, set_info) {
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(0, 0, 1280, 120);
   ctx.fillStyle = UI_CONFIG.colors.neutral;
   ctx.font = 'bold 30px Arial';
   ctx.textAlign = 'left';
   ctx.fillText(`Exercise: ${exercise_name.replace(/_/g, ' ').toUpperCase()}`, 50, 50);
-  ctx.font = '25px Arial';
-  ctx.fillText('Use buttons to change exercise or reset', 50, 90);
+  if (set_info) {
+    ctx.font = 'bold 40px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`SET ${set_info.current} OF ${set_info.total}`, 1230, 75);
+  }
 }
 function draw_countdown(ctx, remaining_time) {
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -535,26 +548,40 @@ let pose;
 let camera;
 let exercise_handler;
 let program_state;
+let workout_plan = [];
 let current_exercise_name = 'bicep_curl';
+let target_reps = 0;
+let target_sets = 0;
+let current_set = 1;
+
 const countdown_duration = 5;
 let countdown_start_time = 0;
 
-window.startPoseTracker = () => {
+const rest_duration = 30;
+let rest_start_time = 0;
+
+window.setWorkoutPlan = (plan) => {
+  workout_plan = plan;
+  console.log('Workout plan loaded into script:', workout_plan);
+};
+
+window.startPoseTracker = (videoElement, canvasElement, controlsElement) => {
+  // MODIFIED: Accept elements as arguments
   if (window.isPoseTrackerActive) return;
-  console.log('Starting Pose Tracker...');
 
-  const videoElement = document.querySelector('.input_video');
-  const canvasElement = document.querySelector('.output_canvas');
-  const canvasCtx = canvasElement.getContext('2d');
-  const controlsElement = document.querySelector('.controls');
-
+  // ADDED: Check if elements were passed correctly
   if (!videoElement || !canvasElement || !controlsElement) {
-    console.error('Required DOM elements not found.');
+    console.error('PoseTracker failed: Required DOM elements were not provided.');
     return;
   }
+  console.log('Starting Pose Tracker with provided elements...');
+
+  const canvasCtx = canvasElement.getContext('2d');
 
   const onResults = (results) => {
     if (!canvasCtx || !canvasElement) return;
+
+    const set_info = { current: current_set, total: target_sets };
 
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -569,28 +596,33 @@ window.startPoseTracker = () => {
       : [];
 
     if (program_state === 'WAITING_FOR_BODY') {
-      draw_header_info(canvasCtx, current_exercise_name);
-      const visibility_config = EXERCISE_CONFIG[current_exercise_name].visibility_check;
-      if (visibility_config) {
-        const is_visible = check_body_visibility(lmList, visibility_config.landmarks);
-        if (is_visible) {
-          program_state = 'COUNTDOWN';
-          countdown_start_time = Date.now() / 1000;
-        } else {
-          draw_visibility_prompt(canvasCtx, visibility_config.feedback);
-        }
-      } else {
+      draw_header_info(canvasCtx, current_exercise_name, set_info);
+      const is_visible = check_body_visibility(
+        lmList,
+        EXERCISE_CONFIG[current_exercise_name].visibility_check.landmarks
+      );
+      if (is_visible) {
         program_state = 'COUNTDOWN';
         countdown_start_time = Date.now() / 1000;
+      } else {
+        draw_visibility_prompt(canvasCtx, EXERCISE_CONFIG[current_exercise_name].visibility_check.feedback);
       }
     } else if (program_state === 'COUNTDOWN') {
-      draw_header_info(canvasCtx, current_exercise_name);
+      draw_header_info(canvasCtx, current_exercise_name, set_info);
       const time_since_start = Date.now() / 1000 - countdown_start_time;
       if (time_since_start >= countdown_duration) {
         program_state = 'TRACKING';
       } else {
-        const remaining_time = Math.ceil(countdown_duration - time_since_start);
-        draw_countdown(canvasCtx, remaining_time);
+        draw_countdown(canvasCtx, Math.ceil(countdown_duration - time_since_start));
+      }
+    } else if (program_state === 'RESTING') {
+      draw_header_info(canvasCtx, current_exercise_name, set_info);
+      const time_since_start = Date.now() / 1000 - rest_start_time;
+      if (time_since_start >= rest_duration) {
+        // Reset for the next set
+        resetState(current_exercise_name, false); // false = don't reset set counter
+      } else {
+        draw_rest_screen(canvasCtx, Math.ceil(rest_duration - time_since_start));
       }
     } else if (program_state === 'TRACKING') {
       let ui_data = {
@@ -608,34 +640,62 @@ window.startPoseTracker = () => {
         draw_active_landmarks(canvasCtx, lmList, exercise_handler.landmarks, ui_data.angle);
       }
 
+      // --- SET AND REP LOGIC ---
+      const total_reps_done = ui_data.good_reps + ui_data.bad_reps;
+      if (total_reps_done >= target_reps) {
+        current_set++;
+        if (current_set > target_sets) {
+          // Exercise Finished! Dispatch event for React to handle.
+          console.log(`${current_exercise_name} finished. Notifying React.`);
+          window.dispatchEvent(new Event('exerciseFinished'));
+          program_state = 'FINISHED'; // Stop processing
+        } else {
+          // Set Finished, start rest.
+          program_state = 'RESTING';
+          rest_start_time = Date.now() / 1000;
+        }
+      }
+
       draw_feedback_box(canvasCtx, ui_data.form_feedback, ui_data.speed_feedback);
       draw_pace_bar(canvasCtx, ui_data.pace_progress, exercise_handler);
       draw_movement_bar(canvasCtx, ui_data.per, ui_data.bar, ui_data.form_feedback === 'GOOD');
       draw_rep_counter(canvasCtx, ui_data.good_reps, ui_data.bad_reps);
-      draw_header_info(canvasCtx, current_exercise_name);
+      draw_header_info(canvasCtx, current_exercise_name, set_info);
     }
     canvasCtx.restore();
   };
 
-  const resetState = (new_exercise) => {
+  const resetState = (new_exercise, reset_set_counter = true) => {
     current_exercise_name = new_exercise || current_exercise_name;
+
+    // Find exercise details from the plan
+    const exerciseDetails = workout_plan.find((ex) => ex.configKey === current_exercise_name);
+    if (exerciseDetails) {
+      target_reps = exerciseDetails.reps;
+      target_sets = exerciseDetails.sets;
+    } else {
+      console.error(`Exercise ${current_exercise_name} not found in workout plan!`);
+      target_reps = 10; // Default fallback
+      target_sets = 3; // Default fallback
+    }
+
+    if (reset_set_counter) {
+      current_set = 1;
+    }
+
     exercise_handler = new Exercise(EXERCISE_CONFIG[current_exercise_name]);
     program_state = 'WAITING_FOR_BODY';
-    console.log(`State reset for exercise: ${current_exercise_name}`);
+    console.log(`State reset for: ${current_exercise_name}. Set ${current_set}/${target_sets}, Reps ${target_reps}`);
   };
 
   const handleButtonClick = (e) => {
     if (e.target.tagName !== 'BUTTON') return;
-
-    if (e.target.id === 'btn-reset') {
-      resetState();
-    } else if (e.target.classList.contains('exercise-btn')) {
-      const new_exercise = e.target.id.replace('btn-', '');
-      if (new_exercise !== current_exercise_name) {
-        document.querySelectorAll('.exercise-btn').forEach((btn) => btn.classList.remove('active'));
-        e.target.classList.add('active');
-        resetState(new_exercise);
-      }
+    const new_exercise = e.target.id.replace('btn-', '');
+    if (new_exercise !== current_exercise_name) {
+      // MODIFIED: Use the passed-in controlsElement to find the buttons
+      controlsElement.querySelectorAll('.exercise-btn').forEach((btn) => btn.classList.remove('active'));
+      e.target.classList.add('active');
+      resetState(new_exercise, true);
     }
   };
 

@@ -184,6 +184,9 @@ const UI_CONFIG = {
   pace_bar: { x: 300, y: 660, w: 730, h: 30 },
 };
 
+// ADDED: Define clickable area for the skip button
+const skip_button_area = { x: 540, y: 550, w: 200, h: 60 };
+
 // ===============================================================
 //                POSE DETECTION & TRACKING LOGIC
 // ===============================================================
@@ -483,15 +486,26 @@ function draw_rep_counter(ctx, good_reps, bad_reps) {
   ctx.font = 'bold 60px Arial';
   ctx.fillText(String(bad_reps).padStart(2, '0'), x + 45, y + 260);
 }
-function draw_rest_screen(ctx, remaining_time) {
+// MODIFIED: This function now handles changing text and drawing a skip button
+function draw_rest_screen(ctx, remaining_time, main_text = 'REST', show_skip_button = false) {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
   ctx.fillRect(0, 0, 1280, 720);
   ctx.fillStyle = UI_CONFIG.colors.good;
   ctx.font = 'bold 100px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText('REST', 640, 300);
+  ctx.fillText(main_text, 640, 300);
   ctx.font = 'bold 150px Arial';
   ctx.fillText(remaining_time, 640, 450);
+
+  if (show_skip_button) {
+    const { x, y, w, h } = skip_button_area;
+    ctx.strokeStyle = UI_CONFIG.colors.neutral;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = UI_CONFIG.colors.neutral;
+    ctx.font = 'bold 40px Arial';
+    ctx.fillText('SKIP', 640, y + 45);
+  }
 }
 function draw_header_info(ctx, exercise_name, set_info) {
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -616,13 +630,20 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement) => {
         draw_countdown(canvasCtx, Math.ceil(countdown_duration - time_since_start));
       }
     } else if (program_state === 'RESTING') {
+      // MODIFIED: Logic for changing text and showing skip button
       draw_header_info(canvasCtx, current_exercise_name, set_info);
       const time_since_start = Date.now() / 1000 - rest_start_time;
+      const remaining_time = Math.ceil(rest_duration - time_since_start);
+
       if (time_since_start >= rest_duration) {
         // Reset for the next set
         resetState(current_exercise_name, false); // false = don't reset set counter
       } else {
-        draw_rest_screen(canvasCtx, Math.ceil(rest_duration - time_since_start));
+        let mainText = 'REST';
+        if (remaining_time <= 3) {
+          mainText = 'PREPARE YOURSELF';
+        }
+        draw_rest_screen(canvasCtx, remaining_time, mainText, true);
       }
     } else if (program_state === 'TRACKING') {
       let ui_data = {
@@ -721,9 +742,27 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement) => {
   });
   camera.start();
 
+  // ADDED: Click listener on the canvas for the skip button
+  const handleCanvasClick = (event) => {
+    if (program_state !== 'RESTING') return;
+
+    const rect = canvasElement.getBoundingClientRect();
+    const scaleX = canvasElement.width / rect.width;
+    const scaleY = canvasElement.height / rect.height;
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+
+    const btn = skip_button_area;
+    if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+      console.log('Skip button clicked! Ending rest.');
+      resetState(current_exercise_name, false); // End rest immediately
+    }
+  };
+
+  canvasElement.addEventListener('click', handleCanvasClick);
   controlsElement.addEventListener('click', handleButtonClick);
 
-  window.poseTrackerInstances = { pose, camera, listener: handleButtonClick };
+  window.poseTrackerInstances = { pose, camera, listener: handleButtonClick, canvasClickListener: handleCanvasClick };
 
   resetState(current_exercise_name);
   window.isPoseTrackerActive = true;
@@ -733,9 +772,11 @@ window.stopPoseTracker = () => {
   if (!window.isPoseTrackerActive || !window.poseTrackerInstances) return;
   console.log('Stopping Pose Tracker...');
 
-  const { pose, listener } = window.poseTrackerInstances;
+  // MODIFIED: Destructure canvasClickListener to remove it
+  const { pose, listener, canvasClickListener } = window.poseTrackerInstances;
   const controlsElement = document.querySelector('.controls');
   const videoElement = document.querySelector('.input_video');
+  const canvasElement = document.querySelector('.output_canvas');
 
   // --- CORRECTED SECTION ---
   // Stop the camera stream by stopping all of its tracks.
@@ -755,9 +796,12 @@ window.stopPoseTracker = () => {
   if (controlsElement && listener) {
     controlsElement.removeEventListener('click', listener);
   }
+  // ADDED: Remove the canvas click listener
+  if (canvasElement && canvasClickListener) {
+    canvasElement.removeEventListener('click', canvasClickListener);
+  }
 
   // Clear the canvas
-  const canvasElement = document.querySelector('.output_canvas');
   if (canvasElement) {
     const canvasCtx = canvasElement.getContext('2d');
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);

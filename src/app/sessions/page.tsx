@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import Sidebar from '../../components/sidebar';
-import PoseTracker from '../../components/PoseTracker'; //  Import the new component
+import PoseTracker from '../../components/PoseTracker';
 
 // Define a type for the exercise data structure for type safety
 type Exercise = {
@@ -75,13 +75,39 @@ const workoutData: Exercise[] = [
 
 const WorkoutSession: React.FC = () => {
   const [selectedExerciseId, setSelectedExerciseId] = React.useState<number>(1);
-  const [isTracking, setIsTracking] = React.useState(false); // State to control the tracker
+  const [isTracking, setIsTracking] = React.useState(false);
+  const [isWorkoutDone, setIsWorkoutDone] = React.useState(false); // State for completion
 
   const selectedExercise = workoutData.find((ex) => ex.id === selectedExerciseId) || workoutData[0];
 
-  // Effect to reset the tracker when the selected exercise changes
+  // Effect to reset the tracker view when the exercise is changed manually
   React.useEffect(() => {
     setIsTracking(false);
+  }, [selectedExerciseId]);
+
+  // --- NEW EFFECT TO HANDLE WORKOUT PROGRESSION ---
+  React.useEffect(() => {
+    const handleExerciseFinished = () => {
+      const currentIndex = workoutData.findIndex((ex) => ex.id === selectedExerciseId);
+      const nextExercise = workoutData[currentIndex + 1];
+
+      if (nextExercise) {
+        // Move to the next exercise
+        setSelectedExerciseId(nextExercise.id);
+      } else {
+        // No more exercises, workout is done!
+        alert('Congratulations, you have completed the workout!');
+        setIsWorkoutDone(true);
+        setIsTracking(false);
+      }
+    };
+
+    window.addEventListener('exerciseFinished', handleExerciseFinished);
+
+    // Cleanup listener when the component unmounts or selectedExerciseId changes
+    return () => {
+      window.removeEventListener('exerciseFinished', handleExerciseFinished);
+    };
   }, [selectedExerciseId]);
 
   return (
@@ -96,28 +122,27 @@ const WorkoutSession: React.FC = () => {
           </section>
 
           {/* Top Card: Form Tracker */}
+          {/* Top Card: Form Tracker */}
           <section className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-700">Form Tracker</h2>
-                <p className="text-gray-600">
-                  Current Movement: <span className="font-medium">{selectedExercise.name}</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Conditional rendering for the tracker */}
+            {/* ... */}
             <div className="w-full bg-gray-200 rounded-md aspect-video flex justify-center items-center">
               {isTracking ? (
-                <PoseTracker exerciseName={selectedExercise.configKey} />
+                <PoseTracker
+                  exerciseName={selectedExercise.configKey}
+                  workoutPlan={workoutData} // Pass the entire plan
+                />
               ) : (
                 <div className="text-center text-gray-500">
-                  <p>Click the button below to start tracking your form.</p>
+                  {isWorkoutDone ? (
+                    <p className="text-xl font-bold text-green-600">Workout Complete!</p>
+                  ) : (
+                    <p>Click the button below to start tracking your form.</p>
+                  )}
                 </div>
               )}
             </div>
 
-            {!isTracking && (
+            {!isTracking && !isWorkoutDone && (
               <div className="flex justify-center mt-4">
                 <button
                   onClick={() => setIsTracking(true)}

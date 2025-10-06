@@ -7,13 +7,16 @@ import { db } from '../lib/db'; // ✨ 1. IMPORT DB INSTANCE
 
 // Define a type for the exercise data structure for type safety
 type Exercise = {
-  id: number; // This will now correspond to detailID
+  id: number; // This will correspond to detailID
   name: string;
   configKey: string; // Key to match the config object
   sets: number;
   reps: number;
   description: string;
   image: string;
+  completedSets: number; // ADDED: To track set progress
+  goodRep: number; // ADDED: To track cumulative good reps
+  badRep: number; // ADDED: To track cumulative bad reps
 };
 
 const NoSessionCard: React.FC = () => {
@@ -39,8 +42,9 @@ const WorkoutSession: React.FC = () => {
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [isWorkoutDone, setIsWorkoutDone] = useState(false);
+  const [initialSetNumber, setInitialSetNumber] = useState(1); // ADDED: State to handle resuming from a specific set
 
-  // ✨ 3. FETCH AND COMBINE DATA FROM DB ON COMPONENT MOUNT
+  // ✨ 3. FETCH AND COMBINE DATA, NOW WITH RESUME LOGIC
   useEffect(() => {
     const fetchWorkoutData = async () => {
       if (!db) {
@@ -48,7 +52,7 @@ const WorkoutSession: React.FC = () => {
         return;
       }
       try {
-        // Step 1: Get the first session (e.g., Monday's session)
+        // Step 1: Get the first session
         const session = await db.sessions.orderBy('sessionID').first();
         if (!session || !session.detailIDs) {
           console.log('No session found in the database.');
@@ -58,32 +62,46 @@ const WorkoutSession: React.FC = () => {
         // Step 2: Get all details for that session
         const details = await db.details.where('detailID').anyOf(session.detailIDs).toArray();
 
-        // Step 3: Get all unique movement definitions needed for these details
+        // Step 3: Get all unique movement definitions needed
         const movementIDs = [...new Set(details.map((d) => d.movementID))];
         const movements = await db.movement.where('movementID').anyOf(movementIDs).toArray();
         const movementMap = new Map(movements.map((m) => [m.movementID, m]));
 
-        // Step 4: Combine details and movements into the final exercise list
+        // Step 4: Combine into the final exercise list, including progress
         const combinedExercises = details
           .map((detail) => {
             const movement = movementMap.get(detail.movementID);
             if (!movement) return null;
 
             return {
-              id: detail.detailID, // Use detailID as the unique ID
+              id: detail.detailID,
               name: movement.movementName,
               configKey: movement.configKey,
               sets: detail.totalSets,
               reps: detail.totalReps,
               description: movement.movementDescription,
               image: movement.movementImage,
+              completedSets: detail.completedSets || 0, // Load progress
+              goodRep: detail.goodRep || 0, // Load progress
+              badRep: detail.badRep || 0, // Load progress
             };
           })
           .filter((ex): ex is Exercise => ex !== null);
 
-        setSessionExercises(combinedExercises);
-        if (combinedExercises.length > 0) {
-          setSelectedExerciseId(combinedExercises[0].id);
+        // --- RESUME LOGIC ---
+        // Find the first exercise that is not yet fully completed
+        const firstUnfinishedExercise = combinedExercises.find((ex) => ex.completedSets < ex.sets);
+
+        if (firstUnfinishedExercise) {
+          setSessionExercises(combinedExercises);
+          setSelectedExerciseId(firstUnfinishedExercise.id);
+          // Start at the next uncompleted set (e.g., if 1 set is done, start at set 2)
+          setInitialSetNumber(firstUnfinishedExercise.completedSets + 1);
+        } else if (combinedExercises.length > 0) {
+          // This means all exercises in the session are completed
+          setSessionExercises(combinedExercises);
+          setIsWorkoutDone(true);
+          setSelectedExerciseId(combinedExercises[combinedExercises.length - 1].id); // Show the last exercise
         }
       } catch (error) {
         console.error('Failed to fetch workout data:', error);
@@ -94,6 +112,40 @@ const WorkoutSession: React.FC = () => {
 
     fetchWorkoutData();
   }, []); // Empty dependency array means this runs once on mount
+
+  // ✨ 4. LISTEN FOR 'setFinished' EVENT TO UPDATE THE DATABASE
+  useEffect(() => {
+    const handleSetFinished = async (event: Event) => {
+      const { configKey, goodRepsInSet, badRepsInSet, completedSetNumber } = (event as CustomEvent).detail;
+
+      const exerciseToUpdate = sessionExercises.find((ex) => ex.configKey === configKey);
+      if (!exerciseToUpdate) return;
+
+      const newGoodReps = exerciseToUpdate.goodRep + goodRepsInSet;
+      const newBadReps = exerciseToUpdate.badRep + badRepsInSet;
+
+      // Update the database with new cumulative reps and completed sets
+      await db.details.update(exerciseToUpdate.id, {
+        goodRep: newGoodReps,
+        badRep: newBadReps,
+        completedSets: completedSetNumber,
+      });
+
+      // Also update our local React state so the UI reflects the change
+      setSessionExercises((prevExercises) =>
+        prevExercises.map((ex) =>
+          ex.id === exerciseToUpdate.id
+            ? { ...ex, goodRep: newGoodReps, badRep: newBadReps, completedSets: completedSetNumber }
+            : ex
+        )
+      );
+    };
+
+    window.addEventListener('setFinished', handleSetFinished);
+    return () => {
+      window.removeEventListener('setFinished', handleSetFinished);
+    };
+  }, [sessionExercises]); // Re-bind listener if sessionExercises changes
 
   // Find the selected exercise from the state
   const selectedExercise = sessionExercises.find((ex) => ex.id === selectedExerciseId) || null;
@@ -110,6 +162,7 @@ const WorkoutSession: React.FC = () => {
 
     if (nextExercise) {
       setSelectedExerciseId(nextExercise.id);
+      setInitialSetNumber(nextExercise.completedSets + 1); // Set the correct starting set for the next exercise
     } else {
       alert('Congratulations, you have completed the workout!');
       setIsWorkoutDone(true);
@@ -127,10 +180,35 @@ const WorkoutSession: React.FC = () => {
     };
   }, [selectedExerciseId, sessionExercises]); // Add sessionExercises dependency
 
-  const handleSkipExercise = () => {
-    console.log('Skipping exercise...');
+  const handleSkipExercise = async () => {
+    if (!selectedExercise) return;
+
+    console.log(`Skipping exercise: ${selectedExercise.name}`);
+
+    // Step 1: Update the database to mark the current exercise as 'completed'
+    await db.details.update(selectedExercise.id, {
+      completedSets: selectedExercise.sets, // Set completed sets to total sets
+    });
+
+    // Step 2: Update the local React state to match, so the UI updates instantly
+    setSessionExercises((prevExercises) =>
+      prevExercises.map((ex) => (ex.id === selectedExercise.id ? { ...ex, completedSets: ex.sets } : ex))
+    );
+
+    // Step 3: Advance to the next exercise using the existing function
     advanceToNextExercise();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-slate-100">
+        <Sidebar />
+        <main className="flex-1 p-8 font-sans ml-72 flex justify-center items-center">
+          <p className="text-xl text-gray-500">Loading your workout session...</p>
+        </main>
+      </div>
+    );
+  }
 
   // ✨ 5. RENDER LOADING STATE OR DYNAMIC DATA
   if (isLoading) {
@@ -144,6 +222,13 @@ const WorkoutSession: React.FC = () => {
     );
   }
 
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   return (
     <div className="flex min-h-screen bg-slate-100">
       <Sidebar />
@@ -153,18 +238,31 @@ const WorkoutSession: React.FC = () => {
             <>
               {/* Page Header Card */}
               <section className="bg-white p-6 rounded-lg shadow-md">
-                <h1 className="text-3xl font-bold text-gray-800">Workout Session 1</h1>
-                <p className="text-md text-gray-500 mt-1">Sunday, October 5, 2025</p>
+                <h1 className="text-3xl font-bold text-gray-800">Workout Session</h1>
+                <p className="text-md text-gray-500 mt-1">{today}</p>
               </section>
               {/* Top Card: Form Tracker */}
               <section className="bg-white p-6 rounded-lg shadow-md">
                 <div className="w-full bg-gray-200 rounded-md aspect-video flex justify-center items-center">
                   {isTracking ? (
-                    <PoseTracker exerciseName={selectedExercise.configKey} workoutPlan={sessionExercises} />
+                    <PoseTracker
+                      exerciseName={selectedExercise.configKey}
+                      workoutPlan={sessionExercises}
+                      initialSet={initialSetNumber} // Pass the starting set number
+                    />
                   ) : (
                     <div className="text-center text-gray-600">
                       {isWorkoutDone ? (
-                        <p className="text-xl font-bold text-green-600">Workout Complete!</p>
+                        <div className="flex flex-col items-center gap-4">
+                          <p className="text-2xl font-bold text-green-600">🎉 Workout Complete! 🎉</p>
+                          <p className="text-gray-500">Awesome job finishing the session.</p>
+                          <Link
+                            href="/schedules"
+                            className="mt-2 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-600 border border-gray-300 rounded-lg hover:bg-gray-100"
+                          >
+                            Back to Schedule
+                          </Link>
+                        </div>
                       ) : (
                         <>
                           <h3 className="text-2xl font-bold text-gray-800">NEXT UP</h3>
@@ -172,9 +270,12 @@ const WorkoutSession: React.FC = () => {
                           <p className="text-2xl text-gray-500 mt-1">
                             {selectedExercise.sets} SETS &times; {selectedExercise.reps} REPS
                           </p>
+                          <p className="text-md text-gray-400 mt-1">
+                            (Completed: {selectedExercise.completedSets} of {selectedExercise.sets} sets)
+                          </p>
                           <button
                             onClick={handleSkipExercise}
-                            className="px-5 py-2 border border-red-400 text-red-500 font-semibold rounded-lg hover:bg-red-500 hover:text-white transition-all duration-200"
+                            className="px-4 py-2 border border-red-500 text-red-500 font-semibold rounded-lg hover:bg-red-50 transition-all duration-200"
                           >
                             Skip Exercise
                           </button>
@@ -188,7 +289,7 @@ const WorkoutSession: React.FC = () => {
                   <div className="flex justify-center items-center mt-4 gap-4">
                     <button
                       onClick={() => setIsTracking(true)}
-                      className="px-5 py-2 border border-green-400 text-green-500 font-semibold rounded-lg hover:bg-green-500 hover:text-white transition-all duration-200"
+                      className="px-6 py-3 text-green-500 bg-white font-semibold text-lg rounded-lg hover:bg-green-50 transition-all duration-200 border border-green-400"
                     >
                       Start Movement
                     </button>
@@ -204,21 +305,27 @@ const WorkoutSession: React.FC = () => {
                     {sessionExercises.map((exercise) => (
                       <div
                         key={exercise.id}
-                        className={`p-4 rounded-md border-2 transition-all duration-200 ${
+                        className={`p-4 rounded-md border-2 transition-all duration-200 relative overflow-hidden ${
                           selectedExerciseId === exercise.id
                             ? 'bg-blue-50 border-blue-500 shadow-sm'
                             : 'bg-white border-gray-200'
                         }`}
                       >
-                        <p className="font-semibold text-blue-600">{exercise.name}</p>
-                        <p className="text-sm text-gray-500">{`${exercise.sets} Sets, ${exercise.reps} Reps`}</p>
+                        <div
+                          className="absolute top-0 left-0 h-full bg-green-200 transition-all duration-300"
+                          style={{ width: `${(exercise.completedSets / exercise.sets) * 100}%` }}
+                        ></div>
+                        <div className="relative z-10">
+                          <p className="font-semibold text-blue-600">{exercise.name}</p>
+                          <p className="text-sm text-gray-500">{`${exercise.sets} Sets, ${exercise.reps} Reps`}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </aside>
                 <section className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
                   <h3 className="text-lg font-semibold mb-4 text-gray-700">
-                    Movement {selectedExercise.id}: {selectedExercise.name}
+                    Movement Details: {selectedExercise.name}
                   </h3>
                   <p className="text-gray-600 mb-6 leading-relaxed">{selectedExercise.description}</p>
                   <div className="flex justify-center items-center">

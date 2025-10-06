@@ -22,20 +22,20 @@ export const mySession = [
 
 export const dummyDetails = [
   // Detail ID: 1-4 for Monday
-  { detailID: 1, movementID: 1, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0 },
-  { detailID: 2, movementID: 2, totalSets: 3, totalReps: 15, goodRep: 0, badRep: 0 },
-  { detailID: 3, movementID: 3, totalSets: 3, totalReps: 10, goodRep: 0, badRep: 0 },
-  { detailID: 4, movementID: 4, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0 },
+  { detailID: 1, movementID: 1, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
+  { detailID: 2, movementID: 2, totalSets: 3, totalReps: 15, goodRep: 0, badRep: 0, completedSets: 0 },
+  { detailID: 3, movementID: 3, totalSets: 3, totalReps: 10, goodRep: 0, badRep: 0, completedSets: 0 },
+  { detailID: 4, movementID: 4, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
   // Detail ID: 5-8 for Wednesday
-  { detailID: 5, movementID: 5, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0 },
-  { detailID: 6, movementID: 1, totalSets: 4, totalReps: 10, goodRep: 0, badRep: 0 },
-  { detailID: 7, movementID: 2, totalSets: 3, totalReps: 20, goodRep: 0, badRep: 0 },
-  { detailID: 8, movementID: 3, totalSets: 3, totalReps: 15, goodRep: 0, badRep: 0 },
+  { detailID: 5, movementID: 5, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
+  { detailID: 6, movementID: 1, totalSets: 4, totalReps: 10, goodRep: 0, badRep: 0, completedSets: 0 },
+  { detailID: 7, movementID: 2, totalSets: 3, totalReps: 20, goodRep: 0, badRep: 0, completedSets: 0 },
+  { detailID: 8, movementID: 3, totalSets: 3, totalReps: 15, goodRep: 0, badRep: 0, completedSets: 0 },
   // Detail ID: 9-12 for Friday
-  { detailID: 9, movementID: 4, totalSets: 5, totalReps: 8, goodRep: 0, badRep: 0 },
-  { detailID: 10, movementID: 5, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0 },
-  { detailID: 11, movementID: 1, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0 },
-  { detailID: 12, movementID: 2, totalSets: 4, totalReps: 12, goodRep: 0, badRep: 0 },
+  { detailID: 9, movementID: 4, totalSets: 5, totalReps: 8, goodRep: 0, badRep: 0, completedSets: 0 },
+  { detailID: 10, movementID: 5, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
+  { detailID: 11, movementID: 1, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
+  { detailID: 12, movementID: 2, totalSets: 4, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
 ];
 
 export const initialMovements = [

@@ -579,7 +579,7 @@ window.setWorkoutPlan = (plan) => {
   console.log('Workout plan loaded into script:', workout_plan);
 };
 
-window.startPoseTracker = (videoElement, canvasElement, controlsElement) => {
+window.startPoseTracker = (videoElement, canvasElement, controlsElement, initialSet = 1) => {
   // MODIFIED: Accept elements as arguments
   if (window.isPoseTrackerActive) return;
 
@@ -664,14 +664,24 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement) => {
       // --- SET AND REP LOGIC ---
       const total_reps_done = ui_data.good_reps + ui_data.bad_reps;
       if (total_reps_done >= target_reps) {
+        // Dispatch a custom event with the results of the set
+        window.dispatchEvent(
+          new CustomEvent('setFinished', {
+            detail: {
+              configKey: current_exercise_name,
+              goodRepsInSet: exercise_handler.good_reps,
+              badRepsInSet: exercise_handler.bad_reps,
+              completedSetNumber: current_set,
+            },
+          })
+        );
+
         current_set++;
         if (current_set > target_sets) {
-          // Exercise Finished! Dispatch event for React to handle.
           console.log(`${current_exercise_name} finished. Notifying React.`);
           window.dispatchEvent(new Event('exerciseFinished'));
           program_state = 'FINISHED'; // Stop processing
         } else {
-          // Set Finished, start rest.
           program_state = 'RESTING';
           rest_start_time = Date.now() / 1000;
         }
@@ -686,23 +696,21 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement) => {
     canvasCtx.restore();
   };
 
-  const resetState = (new_exercise, reset_set_counter = true) => {
+  const resetState = (new_exercise, reset_set_counter = true, startingSet = 1) => {
     current_exercise_name = new_exercise || current_exercise_name;
 
-    // Find exercise details from the plan
     const exerciseDetails = workout_plan.find((ex) => ex.configKey === current_exercise_name);
     if (exerciseDetails) {
       target_reps = exerciseDetails.reps;
       target_sets = exerciseDetails.sets;
     } else {
       console.error(`Exercise ${current_exercise_name} not found in workout plan!`);
-      target_reps = 10; // Default fallback
-      target_sets = 3; // Default fallback
+      target_reps = 10;
+      target_sets = 3;
     }
 
-    if (reset_set_counter) {
-      current_set = 1;
-    }
+    // MODIFIED: Use the provided starting set number
+    current_set = reset_set_counter ? startingSet : current_set;
 
     exercise_handler = new Exercise(EXERCISE_CONFIG[current_exercise_name]);
     program_state = 'WAITING_FOR_BODY';
@@ -764,7 +772,7 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement) => {
 
   window.poseTrackerInstances = { pose, camera, listener: handleButtonClick, canvasClickListener: handleCanvasClick };
 
-  resetState(current_exercise_name);
+  resetState(workout_plan[0]?.configKey || 'bicep_curl', true, initialSet);
   window.isPoseTrackerActive = true;
 };
 

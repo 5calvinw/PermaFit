@@ -3,7 +3,7 @@ import Dexie, { Table } from 'dexie';
 // ✨ 1. IMPORT SEED DATA from the new file
 import { initialMovements, mySession, dummyDetails } from './seedData';
 
-// Interfaces for data shapes remain the same
+// Interfaces for data shapes
 export interface IUser {
   userID?: number;
   name: string;
@@ -19,6 +19,8 @@ export interface ISession {
   time: string;
   detailIDs: number[];
 }
+
+// MODIFIED: Added completedSets to the IDetail interface
 export interface IDetail {
   detailID?: number;
   movementID: number;
@@ -26,7 +28,9 @@ export interface IDetail {
   totalReps: number;
   goodRep: number;
   badRep: number;
+  completedSets: number; // ADDED THIS LINE
 }
+
 export interface IMovement {
   movementID?: number;
   movementName: string;
@@ -44,13 +48,16 @@ export class MyAppDatabase extends Dexie {
 
   constructor() {
     super('MyAppDatabase');
-    this.version(1).stores({
+    // MODIFIED: Bumped the version number from 1 to 2
+    // This correctly migrates the database for existing users to the new schema
+    this.version(2).stores({
       // "++" defines an auto-incrementing primary key.
       users: '++userID, name',
       sessions: '++sessionID, day, *detailIDs', // "*" creates a multi-entry index for arrays.
-      details: 'detailID, movementID',
+      details: 'detailID, movementID', // Schema definition for keys/indexes is unchanged
       movement: 'movementID, configKey',
     });
+
     // The populate event only triggers once when the database is first created.
     this.on('populate', () => this.populateDatabase());
   }
@@ -71,10 +78,6 @@ export class MyAppDatabase extends Dexie {
 }
 
 // ✨ 3. SIMPLIFIED EXPORT
-// Export a single instance. Dexie is smart enough to not throw errors during
-// server-side rendering. Operations will simply fail gracefully if attempted
-// on the server, but your client components ('use client') will work perfectly.
-// This avoids the need for `if (db)` checks everywhere in your app.
 export const db = new MyAppDatabase();
 
 // Helper function remains unchanged

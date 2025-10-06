@@ -12,15 +12,12 @@ type Exercise = {
   sets: number;
   reps: number;
   description: string;
-  images: {
-    start: string;
-    end: string;
-  };
+  image: string; // MODIFIED: Changed from images object to a single image string
 };
 
 // Dummy data for the workout session
 const workoutData: Exercise[] = [
-  /* {
+  {
     id: 1,
     name: 'Bicep Curls',
     configKey: 'bicep_curl',
@@ -28,10 +25,7 @@ const workoutData: Exercise[] = [
     reps: 12,
     description:
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-    images: {
-      start: 'https://i.imgur.com/zDb4zJq.png',
-      end: 'https://i.imgur.com/z6p8yvG.png',
-    },
+    image: '/assets/bicep_curl.jpg', // MODIFIED
   },
   {
     id: 2,
@@ -41,10 +35,7 @@ const workoutData: Exercise[] = [
     reps: 15,
     description:
       'Squats are a fundamental exercise that targets your thighs, hips, and buttocks. Ensure your back remains straight and your knees do not go past your toes for proper form.',
-    images: {
-      start: 'https://i.imgur.com/zDb4zJq.png',
-      end: 'https://i.imgur.com/z6p8yvG.png',
-    },
+    image: '/assets/squat.jpg', // MODIFIED
   },
   {
     id: 3,
@@ -54,10 +45,7 @@ const workoutData: Exercise[] = [
     reps: 10,
     description:
       'Wall push ups are a great upper body exercise. They work the triceps, pectoral muscles, and shoulders. When done with proper form, they can also strengthen the lower back and core.',
-    images: {
-      start: 'https://i.imgur.com/zDb4zJq.png',
-      end: 'https://i.imgur.com/z6p8yvG.png',
-    },
+    image: '/assets/wall_push_up.jpg', // MODIFIED
   },
   {
     id: 4,
@@ -67,11 +55,18 @@ const workoutData: Exercise[] = [
     reps: 12,
     description:
       'Glute bridges are excellent for targeting the glutes and hamstrings. Lie on your back with your knees bent and feet flat on the floor, then lift your hips toward the ceiling.',
-    images: {
-      start: 'https://i.imgur.com/zDb4zJq.png',
-      end: 'https://i.imgur.com/z6p8yvG.png',
-    },
-  }, */
+    image: '/assets/glute_bridge.jpg', // MODIFIED
+  },
+  {
+    id: 5,
+    name: 'Seated Leg Raise',
+    configKey: 'seated_leg_raise', // Example for another exercise
+    sets: 3,
+    reps: 12,
+    description:
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+    image: '/assets/seated_leg_raise.png', // MODIFIED
+  },
 ];
 
 const NoSessionCard: React.FC = () => {
@@ -91,97 +86,109 @@ const NoSessionCard: React.FC = () => {
 };
 
 const WorkoutSession: React.FC = () => {
-  // MODIFIED: Handle the case where there is no initial exercise
   const [selectedExerciseId, setSelectedExerciseId] = React.useState<number | null>(
     workoutData.length > 0 ? workoutData[0].id : null
   );
   const [isTracking, setIsTracking] = React.useState(false);
   const [isWorkoutDone, setIsWorkoutDone] = React.useState(false);
 
-  // MODIFIED: selectedExercise can now be null
   const selectedExercise = workoutData.find((ex) => ex.id === selectedExerciseId) || null;
 
-  // Effect to reset the tracker view when the exercise is changed manually
   React.useEffect(() => {
     setIsTracking(false);
   }, [selectedExerciseId]);
 
-  // --- NEW EFFECT TO HANDLE WORKOUT PROGRESSION ---
+  // Function to advance to the next exercise or end the workout
+  const advanceToNextExercise = () => {
+    if (!selectedExerciseId) return;
+
+    const currentIndex = workoutData.findIndex((ex) => ex.id === selectedExerciseId);
+    const nextExercise = workoutData[currentIndex + 1];
+
+    if (nextExercise) {
+      setSelectedExerciseId(nextExercise.id);
+    } else {
+      alert('Congratulations, you have completed the workout!');
+      setIsWorkoutDone(true);
+      setIsTracking(false);
+    }
+  };
+
+  // Effect to handle automatic progression after finishing an exercise
   React.useEffect(() => {
     const handleExerciseFinished = () => {
-      if (!selectedExerciseId) return; // Guard clause
-
-      const currentIndex = workoutData.findIndex((ex) => ex.id === selectedExerciseId);
-      const nextExercise = workoutData[currentIndex + 1];
-
-      if (nextExercise) {
-        // Move to the next exercise
-        setSelectedExerciseId(nextExercise.id);
-      } else {
-        // No more exercises, workout is done!
-        alert('Congratulations, you have completed the workout!');
-        setIsWorkoutDone(true);
-        setIsTracking(false);
-      }
+      advanceToNextExercise();
     };
 
     window.addEventListener('exerciseFinished', handleExerciseFinished);
 
-    // Cleanup listener when the component unmounts or selectedExerciseId changes
     return () => {
       window.removeEventListener('exerciseFinished', handleExerciseFinished);
     };
   }, [selectedExerciseId]);
+
+  const handleSkipExercise = () => {
+    console.log('Skipping exercise...');
+    advanceToNextExercise();
+  };
 
   return (
     <div className="flex min-h-screen bg-slate-100">
       <Sidebar />
       <main className="flex-1 p-8 font-sans ml-72">
         <div className="flex flex-col gap-8">
-          {/* =================================================================== */}
-          {/* MODIFIED: Conditional logic to show workout or NoSessionCard   */}
-          {/* =================================================================== */}
           {workoutData.length > 0 && selectedExercise ? (
             <>
               {/* Page Header Card */}
               <section className="bg-white p-6 rounded-lg shadow-md">
                 <h1 className="text-3xl font-bold text-gray-800">Workout Session 1</h1>
-                <p className="text-md text-gray-500 mt-1">Sunday, 5 October 2025</p>
+                <p className="text-md text-gray-500 mt-1">Sunday, October 5, 2025</p>
               </section>
               {/* Top Card: Form Tracker */}
               <section className="bg-white p-6 rounded-lg shadow-md">
                 <div className="w-full bg-gray-200 rounded-md aspect-video flex justify-center items-center">
                   {isTracking ? (
-                    <PoseTracker
-                      exerciseName={selectedExercise.configKey}
-                      workoutPlan={workoutData} // Pass the entire plan
-                    />
+                    <PoseTracker exerciseName={selectedExercise.configKey} workoutPlan={workoutData} />
                   ) : (
-                    <div className="text-center text-gray-500">
+                    <div className="text-center text-gray-600">
                       {isWorkoutDone ? (
                         <p className="text-xl font-bold text-green-600">Workout Complete!</p>
                       ) : (
-                        <p>Click the button below to start tracking your form.</p>
+                        <>
+                          <h3 className="text-2xl font-bold text-gray-800">NEXT UP</h3>
+                          <p className="text-4xl font-bold text-blue-600 mt-2">{selectedExercise.name}</p>
+                          <p className="text-2xl text-gray-500 mt-1">
+                            {selectedExercise.sets} SETS &times; {selectedExercise.reps} REPS
+                          </p>
+                          <button
+                            onClick={handleSkipExercise}
+                            className="px-5 py-2 border border-red-400 text-red-500 font-semibold rounded-lg hover:bg-red-500 hover:text-white transition-all duration-200"
+                          >
+                            Skip Exercise
+                          </button>
+                        </>
                       )}
                     </div>
                   )}
                 </div>
 
+                {/* ✨ MODIFIED SECTION: Added Skip Button ✨ */}
                 {!isTracking && !isWorkoutDone && (
-                  <div className="flex justify-center mt-4">
+                  <div className="flex justify-center items-center mt-4 gap-4">
                     <button
                       onClick={() => setIsTracking(true)}
                       className="px-5 py-2 border border-green-400 text-green-500 font-semibold rounded-lg hover:bg-green-500 hover:text-white transition-all duration-200"
                     >
                       Start Movement
                     </button>
+                    {/* 👇 NEW BUTTON HERE 👇 */}
                   </div>
                 )}
               </section>
 
               {/* Bottom Section: Workout Details */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: List of exercises in the session */}
+                {/* ... (rest of the JSX remains exactly the same) ... */}
                 <aside className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
                   <h3 className="text-lg font-semibold mb-4 text-gray-700">This Session</h3>
                   <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
@@ -200,29 +207,20 @@ const WorkoutSession: React.FC = () => {
                     ))}
                   </div>
                 </aside>
-
-                {/* Right Column: Details of the selected movement */}
                 <section className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
                   <h3 className="text-lg font-semibold mb-4 text-gray-700">
                     Movement {selectedExercise.id}: {selectedExercise.name}
                   </h3>
                   <p className="text-gray-600 mb-6 leading-relaxed">{selectedExercise.description}</p>
-                  <div className="flex justify-center items-center gap-8">
+                  {/* MODIFIED: Displaying a single image instead of start and end positions */}
+                  <div className="flex justify-center items-center">
                     <figure className="text-center">
                       <img
-                        src={selectedExercise.images.start}
-                        alt={`${selectedExercise.name} start position`}
-                        className="h-48 object-contain"
+                        src={selectedExercise.image}
+                        alt={`${selectedExercise.name} illustration`}
+                        className="h-64 object-contain"
                       />
-                      <figcaption className="text-sm text-gray-500 mt-2">Start</figcaption>
-                    </figure>
-                    <figure className="text-center">
-                      <img
-                        src={selectedExercise.images.end}
-                        alt={`${selectedExercise.name} end position`}
-                        className="h-48 object-contain"
-                      />
-                      <figcaption className="text-sm text-gray-500 mt-2">End</figcaption>
+                      <figcaption className="text-sm text-gray-500 mt-2">Illustration</figcaption>
                     </figure>
                   </div>
                 </section>

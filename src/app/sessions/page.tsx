@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import Link from 'next/link';
 import Sidebar from '../../components/sidebar';
 import PoseTracker from '../../components/PoseTracker';
 
@@ -19,7 +20,7 @@ type Exercise = {
 
 // Dummy data for the workout session
 const workoutData: Exercise[] = [
-  {
+  /* {
     id: 1,
     name: 'Bicep Curls',
     configKey: 'bicep_curl',
@@ -70,15 +71,35 @@ const workoutData: Exercise[] = [
       start: 'https://i.imgur.com/zDb4zJq.png',
       end: 'https://i.imgur.com/z6p8yvG.png',
     },
-  },
+  }, */
 ];
 
-const WorkoutSession: React.FC = () => {
-  const [selectedExerciseId, setSelectedExerciseId] = React.useState<number>(1);
-  const [isTracking, setIsTracking] = React.useState(false);
-  const [isWorkoutDone, setIsWorkoutDone] = React.useState(false); // State for completion
+const NoSessionCard: React.FC = () => {
+  return (
+    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+      <h2 className="text-3xl font-bold text-gray-800">No sessions are ongoing.</h2>
+      <p className="mt-1 text-gray-500">Go to your workout schedule and start a session now</p>
+      <Link
+        href="/schedules"
+        className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-600 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-200"
+      >
+        Go to Workout Schedule
+        <span aria-hidden="true">&rarr;</span>
+      </Link>
+    </div>
+  );
+};
 
-  const selectedExercise = workoutData.find((ex) => ex.id === selectedExerciseId) || workoutData[0];
+const WorkoutSession: React.FC = () => {
+  // MODIFIED: Handle the case where there is no initial exercise
+  const [selectedExerciseId, setSelectedExerciseId] = React.useState<number | null>(
+    workoutData.length > 0 ? workoutData[0].id : null
+  );
+  const [isTracking, setIsTracking] = React.useState(false);
+  const [isWorkoutDone, setIsWorkoutDone] = React.useState(false);
+
+  // MODIFIED: selectedExercise can now be null
+  const selectedExercise = workoutData.find((ex) => ex.id === selectedExerciseId) || null;
 
   // Effect to reset the tracker view when the exercise is changed manually
   React.useEffect(() => {
@@ -88,6 +109,8 @@ const WorkoutSession: React.FC = () => {
   // --- NEW EFFECT TO HANDLE WORKOUT PROGRESSION ---
   React.useEffect(() => {
     const handleExerciseFinished = () => {
+      if (!selectedExerciseId) return; // Guard clause
+
       const currentIndex = workoutData.findIndex((ex) => ex.id === selectedExerciseId);
       const nextExercise = workoutData[currentIndex + 1];
 
@@ -115,93 +138,99 @@ const WorkoutSession: React.FC = () => {
       <Sidebar />
       <main className="flex-1 p-8 font-sans ml-72">
         <div className="flex flex-col gap-8">
-          {/* Page Header Card */}
-          <section className="bg-white p-6 rounded-lg shadow-md">
-            <h1 className="text-3xl font-bold text-gray-800">Workout Session 1</h1>
-            <p className="text-md text-gray-500 mt-1">Sunday, 5 October 2025</p>
-          </section>
-
-          {/* Top Card: Form Tracker */}
-          {/* Top Card: Form Tracker */}
-          <section className="bg-white p-6 rounded-lg shadow-md">
-            {/* ... */}
-            <div className="w-full bg-gray-200 rounded-md aspect-video flex justify-center items-center">
-              {isTracking ? (
-                <PoseTracker
-                  exerciseName={selectedExercise.configKey}
-                  workoutPlan={workoutData} // Pass the entire plan
-                />
-              ) : (
-                <div className="text-center text-gray-500">
-                  {isWorkoutDone ? (
-                    <p className="text-xl font-bold text-green-600">Workout Complete!</p>
+          {/* =================================================================== */}
+          {/* MODIFIED: Conditional logic to show workout or NoSessionCard   */}
+          {/* =================================================================== */}
+          {workoutData.length > 0 && selectedExercise ? (
+            <>
+              {/* Page Header Card */}
+              <section className="bg-white p-6 rounded-lg shadow-md">
+                <h1 className="text-3xl font-bold text-gray-800">Workout Session 1</h1>
+                <p className="text-md text-gray-500 mt-1">Sunday, 5 October 2025</p>
+              </section>
+              {/* Top Card: Form Tracker */}
+              <section className="bg-white p-6 rounded-lg shadow-md">
+                <div className="w-full bg-gray-200 rounded-md aspect-video flex justify-center items-center">
+                  {isTracking ? (
+                    <PoseTracker
+                      exerciseName={selectedExercise.configKey}
+                      workoutPlan={workoutData} // Pass the entire plan
+                    />
                   ) : (
-                    <p>Click the button below to start tracking your form.</p>
+                    <div className="text-center text-gray-500">
+                      {isWorkoutDone ? (
+                        <p className="text-xl font-bold text-green-600">Workout Complete!</p>
+                      ) : (
+                        <p>Click the button below to start tracking your form.</p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {!isTracking && !isWorkoutDone && (
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={() => setIsTracking(true)}
-                  className="px-5 py-2 border border-green-400 text-green-500 font-semibold rounded-lg hover:bg-green-500 hover:text-white transition-all duration-200"
-                >
-                  Start Movement
-                </button>
-              </div>
-            )}
-          </section>
-
-          {/* Bottom Section: Workout Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column: List of exercises in the session */}
-            <aside className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-4 text-gray-700">This Session</h3>
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                {workoutData.map((exercise) => (
-                  <div
-                    key={exercise.id}
-                    className={`p-4 rounded-md border-2 transition-all duration-200 ${
-                      selectedExerciseId === exercise.id
-                        ? 'bg-blue-50 border-blue-500 shadow-sm'
-                        : 'bg-white border-gray-200'
-                    }`}
-                  >
-                    <p className="font-semibold text-blue-600">{exercise.name}</p>
-                    <p className="text-sm text-gray-500">{`${exercise.sets} Sets, ${exercise.reps} Reps`}</p>
+                {!isTracking && !isWorkoutDone && (
+                  <div className="flex justify-center mt-4">
+                    <button
+                      onClick={() => setIsTracking(true)}
+                      className="px-5 py-2 border border-green-400 text-green-500 font-semibold rounded-lg hover:bg-green-500 hover:text-white transition-all duration-200"
+                    >
+                      Start Movement
+                    </button>
                   </div>
-                ))}
-              </div>
-            </aside>
+                )}
+              </section>
 
-            {/* Right Column: Details of the selected movement */}
-            <section className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-4 text-gray-700">
-                Movement {selectedExercise.id}: {selectedExercise.name}
-              </h3>
-              <p className="text-gray-600 mb-6 leading-relaxed">{selectedExercise.description}</p>
-              <div className="flex justify-center items-center gap-8">
-                <figure className="text-center">
-                  <img
-                    src={selectedExercise.images.start}
-                    alt={`${selectedExercise.name} start position`}
-                    className="h-48 object-contain"
-                  />
-                  <figcaption className="text-sm text-gray-500 mt-2">Start</figcaption>
-                </figure>
-                <figure className="text-center">
-                  <img
-                    src={selectedExercise.images.end}
-                    alt={`${selectedExercise.name} end position`}
-                    className="h-48 object-contain"
-                  />
-                  <figcaption className="text-sm text-gray-500 mt-2">End</figcaption>
-                </figure>
+              {/* Bottom Section: Workout Details */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: List of exercises in the session */}
+                <aside className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-700">This Session</h3>
+                  <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                    {workoutData.map((exercise) => (
+                      <div
+                        key={exercise.id}
+                        className={`p-4 rounded-md border-2 transition-all duration-200 ${
+                          selectedExerciseId === exercise.id
+                            ? 'bg-blue-50 border-blue-500 shadow-sm'
+                            : 'bg-white border-gray-200'
+                        }`}
+                      >
+                        <p className="font-semibold text-blue-600">{exercise.name}</p>
+                        <p className="text-sm text-gray-500">{`${exercise.sets} Sets, ${exercise.reps} Reps`}</p>
+                      </div>
+                    ))}
+                  </div>
+                </aside>
+
+                {/* Right Column: Details of the selected movement */}
+                <section className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-700">
+                    Movement {selectedExercise.id}: {selectedExercise.name}
+                  </h3>
+                  <p className="text-gray-600 mb-6 leading-relaxed">{selectedExercise.description}</p>
+                  <div className="flex justify-center items-center gap-8">
+                    <figure className="text-center">
+                      <img
+                        src={selectedExercise.images.start}
+                        alt={`${selectedExercise.name} start position`}
+                        className="h-48 object-contain"
+                      />
+                      <figcaption className="text-sm text-gray-500 mt-2">Start</figcaption>
+                    </figure>
+                    <figure className="text-center">
+                      <img
+                        src={selectedExercise.images.end}
+                        alt={`${selectedExercise.name} end position`}
+                        className="h-48 object-contain"
+                      />
+                      <figcaption className="text-sm text-gray-500 mt-2">End</figcaption>
+                    </figure>
+                  </div>
+                </section>
               </div>
-            </section>
-          </div>
+            </>
+          ) : (
+            <NoSessionCard />
+          )}
         </div>
       </main>
     </div>

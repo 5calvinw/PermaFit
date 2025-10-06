@@ -1,73 +1,20 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Sidebar from '../../components/sidebar';
 import PoseTracker from '../../components/PoseTracker';
+import { db } from '../lib/db'; // ✨ 1. IMPORT DB INSTANCE
 
 // Define a type for the exercise data structure for type safety
 type Exercise = {
-  id: number;
+  id: number; // This will now correspond to detailID
   name: string;
   configKey: string; // Key to match the config object
   sets: number;
   reps: number;
   description: string;
-  image: string; // MODIFIED: Changed from images object to a single image string
+  image: string;
 };
-
-// Dummy data for the workout session
-const workoutData: Exercise[] = [
-  {
-    id: 1,
-    name: 'Bicep Curls',
-    configKey: 'bicep_curl',
-    sets: 3,
-    reps: 12,
-    description:
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-    image: '/assets/bicep_curl.jpg', // MODIFIED
-  },
-  {
-    id: 2,
-    name: 'Squats',
-    configKey: 'squat',
-    sets: 3,
-    reps: 15,
-    description:
-      'Squats are a fundamental exercise that targets your thighs, hips, and buttocks. Ensure your back remains straight and your knees do not go past your toes for proper form.',
-    image: '/assets/squat.jpg', // MODIFIED
-  },
-  {
-    id: 3,
-    name: 'Wall Push Ups', // Changed name for clarity
-    configKey: 'wall_push_up', // FIXED: This now correctly matches the key in EXERCISE_CONFIG
-    sets: 3,
-    reps: 10,
-    description:
-      'Wall push ups are a great upper body exercise. They work the triceps, pectoral muscles, and shoulders. When done with proper form, they can also strengthen the lower back and core.',
-    image: '/assets/wall_push_up.jpg', // MODIFIED
-  },
-  {
-    id: 4,
-    name: 'Glute Bridges',
-    configKey: 'glute_bridge', // Example for another exercise
-    sets: 3,
-    reps: 12,
-    description:
-      'Glute bridges are excellent for targeting the glutes and hamstrings. Lie on your back with your knees bent and feet flat on the floor, then lift your hips toward the ceiling.',
-    image: '/assets/glute_bridge.jpg', // MODIFIED
-  },
-  {
-    id: 5,
-    name: 'Seated Leg Raise',
-    configKey: 'seated_leg_raise', // Example for another exercise
-    sets: 3,
-    reps: 12,
-    description:
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-    image: '/assets/seated_leg_raise.png', // MODIFIED
-  },
-];
 
 const NoSessionCard: React.FC = () => {
   return (
@@ -86,24 +33,80 @@ const NoSessionCard: React.FC = () => {
 };
 
 const WorkoutSession: React.FC = () => {
-  const [selectedExerciseId, setSelectedExerciseId] = React.useState<number | null>(
-    workoutData.length > 0 ? workoutData[0].id : null
-  );
-  const [isTracking, setIsTracking] = React.useState(false);
-  const [isWorkoutDone, setIsWorkoutDone] = React.useState(false);
+  // ✨ 2. MANAGE STATE FOR DYNAMIC DATA AND LOADING
+  const [sessionExercises, setSessionExercises] = useState<Exercise[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
+  const [isWorkoutDone, setIsWorkoutDone] = useState(false);
 
-  const selectedExercise = workoutData.find((ex) => ex.id === selectedExerciseId) || null;
+  // ✨ 3. FETCH AND COMBINE DATA FROM DB ON COMPONENT MOUNT
+  useEffect(() => {
+    const fetchWorkoutData = async () => {
+      if (!db) {
+        setIsLoading(false);
+        return;
+      }
+      try {
+        // Step 1: Get the first session (e.g., Monday's session)
+        const session = await db.sessions.orderBy('sessionID').first();
+        if (!session || !session.detailIDs) {
+          console.log('No session found in the database.');
+          return;
+        }
 
-  React.useEffect(() => {
+        // Step 2: Get all details for that session
+        const details = await db.details.where('detailID').anyOf(session.detailIDs).toArray();
+
+        // Step 3: Get all unique movement definitions needed for these details
+        const movementIDs = [...new Set(details.map((d) => d.movementID))];
+        const movements = await db.movement.where('movementID').anyOf(movementIDs).toArray();
+        const movementMap = new Map(movements.map((m) => [m.movementID, m]));
+
+        // Step 4: Combine details and movements into the final exercise list
+        const combinedExercises = details
+          .map((detail) => {
+            const movement = movementMap.get(detail.movementID);
+            if (!movement) return null;
+
+            return {
+              id: detail.detailID, // Use detailID as the unique ID
+              name: movement.movementName,
+              configKey: movement.configKey,
+              sets: detail.totalSets,
+              reps: detail.totalReps,
+              description: movement.movementDescription,
+              image: movement.movementImage,
+            };
+          })
+          .filter((ex): ex is Exercise => ex !== null);
+
+        setSessionExercises(combinedExercises);
+        if (combinedExercises.length > 0) {
+          setSelectedExerciseId(combinedExercises[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to fetch workout data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWorkoutData();
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Find the selected exercise from the state
+  const selectedExercise = sessionExercises.find((ex) => ex.id === selectedExerciseId) || null;
+
+  useEffect(() => {
     setIsTracking(false);
   }, [selectedExerciseId]);
 
-  // Function to advance to the next exercise or end the workout
   const advanceToNextExercise = () => {
     if (!selectedExerciseId) return;
 
-    const currentIndex = workoutData.findIndex((ex) => ex.id === selectedExerciseId);
-    const nextExercise = workoutData[currentIndex + 1];
+    const currentIndex = sessionExercises.findIndex((ex) => ex.id === selectedExerciseId);
+    const nextExercise = sessionExercises[currentIndex + 1];
 
     if (nextExercise) {
       setSelectedExerciseId(nextExercise.id);
@@ -114,30 +117,39 @@ const WorkoutSession: React.FC = () => {
     }
   };
 
-  // Effect to handle automatic progression after finishing an exercise
-  React.useEffect(() => {
+  useEffect(() => {
     const handleExerciseFinished = () => {
       advanceToNextExercise();
     };
-
     window.addEventListener('exerciseFinished', handleExerciseFinished);
-
     return () => {
       window.removeEventListener('exerciseFinished', handleExerciseFinished);
     };
-  }, [selectedExerciseId]);
+  }, [selectedExerciseId, sessionExercises]); // Add sessionExercises dependency
 
   const handleSkipExercise = () => {
     console.log('Skipping exercise...');
     advanceToNextExercise();
   };
 
+  // ✨ 5. RENDER LOADING STATE OR DYNAMIC DATA
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-slate-100">
+        <Sidebar />
+        <main className="flex-1 p-8 font-sans ml-72 flex justify-center items-center">
+          <p className="text-xl text-gray-500">Loading your workout session...</p>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-100">
       <Sidebar />
       <main className="flex-1 p-8 font-sans ml-72">
         <div className="flex flex-col gap-8">
-          {workoutData.length > 0 && selectedExercise ? (
+          {sessionExercises.length > 0 && selectedExercise ? (
             <>
               {/* Page Header Card */}
               <section className="bg-white p-6 rounded-lg shadow-md">
@@ -148,7 +160,7 @@ const WorkoutSession: React.FC = () => {
               <section className="bg-white p-6 rounded-lg shadow-md">
                 <div className="w-full bg-gray-200 rounded-md aspect-video flex justify-center items-center">
                   {isTracking ? (
-                    <PoseTracker exerciseName={selectedExercise.configKey} workoutPlan={workoutData} />
+                    <PoseTracker exerciseName={selectedExercise.configKey} workoutPlan={sessionExercises} />
                   ) : (
                     <div className="text-center text-gray-600">
                       {isWorkoutDone ? (
@@ -172,7 +184,6 @@ const WorkoutSession: React.FC = () => {
                   )}
                 </div>
 
-                {/* ✨ MODIFIED SECTION: Added Skip Button ✨ */}
                 {!isTracking && !isWorkoutDone && (
                   <div className="flex justify-center items-center mt-4 gap-4">
                     <button
@@ -181,18 +192,16 @@ const WorkoutSession: React.FC = () => {
                     >
                       Start Movement
                     </button>
-                    {/* 👇 NEW BUTTON HERE 👇 */}
                   </div>
                 )}
               </section>
 
               {/* Bottom Section: Workout Details */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* ... (rest of the JSX remains exactly the same) ... */}
                 <aside className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
                   <h3 className="text-lg font-semibold mb-4 text-gray-700">This Session</h3>
                   <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                    {workoutData.map((exercise) => (
+                    {sessionExercises.map((exercise) => (
                       <div
                         key={exercise.id}
                         className={`p-4 rounded-md border-2 transition-all duration-200 ${
@@ -212,11 +221,10 @@ const WorkoutSession: React.FC = () => {
                     Movement {selectedExercise.id}: {selectedExercise.name}
                   </h3>
                   <p className="text-gray-600 mb-6 leading-relaxed">{selectedExercise.description}</p>
-                  {/* MODIFIED: Displaying a single image instead of start and end positions */}
                   <div className="flex justify-center items-center">
                     <figure className="text-center">
                       <img
-                        src={selectedExercise.image}
+                        src={`/assets/${selectedExercise.image}`}
                         alt={`${selectedExercise.name} illustration`}
                         className="h-64 object-contain"
                       />

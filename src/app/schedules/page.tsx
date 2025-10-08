@@ -14,47 +14,42 @@ interface Session {
 }
 
 
+interface Session {
+  sessionID: number;
+  day: string; 
+  time: string;
+  detailID: number[];
+  calculatedDate: Date; // Add this property to store the calculated date
+}
+
+// --- (No changes to getThisWeeksDateForDay or formatDateParts functions) ---
 function getThisWeeksDateForDay(targetDay: string): Date {
   const dayMapping: { [key: string]: number } = {
     'SUNDAY': 0, 'MONDAY': 1, 'TUESDAY': 2, 'WEDNESDAY': 3,
     'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6,
   };
-
- 
   if (!targetDay) return new Date(); 
-  
   const targetDayIndex = dayMapping[targetDay.toUpperCase()];
   if (targetDayIndex === undefined) return new Date();
-
   const today = new Date();
   const todayDayIndex = today.getDay();
-
- 
   const mondayOfThisWeek = new Date(today);
   mondayOfThisWeek.setDate(today.getDate() - todayDayIndex + (todayDayIndex === 0 ? -6 : 1));
-  
   const targetDate = new Date(mondayOfThisWeek);
   targetDate.setDate(mondayOfThisWeek.getDate() + (targetDayIndex - dayMapping.MONDAY));
-  
   targetDate.setHours(0, 0, 0, 0);
-
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-
   if (targetDate < startOfToday) {
     targetDate.setDate(targetDate.getDate() + 7);
   }
-
   return targetDate;
 }
 
-
 const formatDateParts = (date: Date) => {
- 
   if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
     return { day: 'ERR', dateNum: 0, month: 'ERR' };
   }
-  
   return {
     day: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
     dateNum: date.getDate(),
@@ -71,17 +66,17 @@ export default function SchedulesPage() {
         if (db) {
           const allSessions = await db.sessions.toArray();
 
-    
-          const dayOrder = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+          // ✨ 2. CALCULATE DATES FIRST, THEN SORT
+          // Map each session to a new object that includes its calculated date
+          const sessionsWithDates = allSessions.map(session => ({
+            ...session,
+            calculatedDate: getThisWeeksDateForDay(session.day)
+          }));
 
-        
-          allSessions.sort((a, b) => {
-            const dayA = dayOrder.indexOf(a.day.toUpperCase());
-            const dayB = dayOrder.indexOf(b.day.toUpperCase());
-            return dayA - dayB;
-          });
+          // Now, sort the new array based on the actual calendar date
+          sessionsWithDates.sort((a, b) => a.calculatedDate.getTime() - b.calculatedDate.getTime());
 
-          setSessions(allSessions);
+          setSessions(sessionsWithDates);
         }
       } catch (error) {
         console.error("Failed to fetch sessions:", error);
@@ -99,10 +94,9 @@ export default function SchedulesPage() {
           <div className="text-xl text-black">See your exercise dates and times. Start, reschedule, or skip as needed.</div>
           
           {sessions.map((session, index) => {
-           
-            const calculatedDate = getThisWeeksDateForDay(session.day);
-         
-            const { day, dateNum, month } = formatDateParts(calculatedDate);
+            // ✨ 3. USE THE PRE-CALCULATED DATE
+            // The date is already on the session object, no need to calculate it again.
+            const { day, dateNum, month } = formatDateParts(session.calculatedDate);
 
             return (
               <ScheduleBox
@@ -121,4 +115,3 @@ export default function SchedulesPage() {
     </div>
   );
 }
-

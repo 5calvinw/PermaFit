@@ -2,23 +2,6 @@
 
 // This file separates the initial database data from the database schema definition.
 
-export const mySession = [
-  {
-    day: 'Monday',
-    time: '09:00',
-    detailIDs: [1, 2, 3, 4],
-  },
-  {
-    day: 'Wednesday',
-    time: '13:00',
-    detailIDs: [5, 6, 7, 8],
-  },
-  {
-    day: 'Friday',
-    time: '18:00',
-    detailIDs: [9, 10, 11, 12], // Assuming detailIDs were meant to be unique
-  },
-];
 
 export const dummyDetails = [
   // Detail ID: 1-4 for Monday

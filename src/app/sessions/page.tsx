@@ -41,7 +41,6 @@ const WorkoutSession: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
   const [isTracking, setIsTracking] = useState(false);
-  const [isWorkoutDone, setIsWorkoutDone] = useState(false);
   const [initialSetNumber, setInitialSetNumber] = useState(1); // ADDED: State to handle resuming from a specific set
 
   // ✨ 3. FETCH AND COMBINE DATA, NOW WITH RESUME LOGIC
@@ -98,10 +97,8 @@ const WorkoutSession: React.FC = () => {
           // Start at the next uncompleted set (e.g., if 1 set is done, start at set 2)
           setInitialSetNumber(firstUnfinishedExercise.completedSets + 1);
         } else if (combinedExercises.length > 0) {
-          // This means all exercises in the session are completed
-          setSessionExercises(combinedExercises);
-          setIsWorkoutDone(true);
-          setSelectedExerciseId(combinedExercises[combinedExercises.length - 1].id); // Show the last exercise
+          // This means all exercises are already completed. Silently show the NoSessionCard.
+          setSessionExercises([]);
         }
       } catch (error) {
         console.error('Failed to fetch workout data:', error);
@@ -164,9 +161,9 @@ const WorkoutSession: React.FC = () => {
       setSelectedExerciseId(nextExercise.id);
       setInitialSetNumber(nextExercise.completedSets + 1); // Set the correct starting set for the next exercise
     } else {
-      alert('Congratulations, you have completed the workout!');
-      setIsWorkoutDone(true);
-      setIsTracking(false);
+      // This is called when the final exercise is completed.
+      alert("Congrats! Today's workout is done.");
+      setSessionExercises([]); // Clear exercises, which will cause NoSessionCard to render.
     }
   };
 
@@ -210,18 +207,6 @@ const WorkoutSession: React.FC = () => {
     );
   }
 
-  // ✨ 5. RENDER LOADING STATE OR DYNAMIC DATA
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen bg-slate-100">
-        <Sidebar />
-        <main className="flex-1 p-8 font-sans ml-72 flex justify-center items-center">
-          <p className="text-xl text-gray-500">Loading your workout session...</p>
-        </main>
-      </div>
-    );
-  }
-
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -252,40 +237,27 @@ const WorkoutSession: React.FC = () => {
                     />
                   ) : (
                     <div className="text-center text-gray-600">
-                      {isWorkoutDone ? (
-                        <div className="flex flex-col items-center gap-4">
-                          <p className="text-2xl font-bold text-green-600">🎉 Workout Complete! 🎉</p>
-                          <p className="text-gray-500">Awesome job finishing the session.</p>
-                          <Link
-                            href="/schedules"
-                            className="mt-2 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-600 border border-gray-300 rounded-lg hover:bg-gray-100"
-                          >
-                            Back to Schedule
-                          </Link>
-                        </div>
-                      ) : (
-                        <>
-                          <h3 className="text-2xl font-bold text-gray-800">NEXT UP</h3>
-                          <p className="text-4xl font-bold text-blue-600 mt-2">{selectedExercise.name}</p>
-                          <p className="text-2xl text-gray-500 mt-1">
-                            {selectedExercise.sets} SETS &times; {selectedExercise.reps} REPS
-                          </p>
-                          <p className="text-md text-gray-400 mt-1">
-                            (Completed: {selectedExercise.completedSets} of {selectedExercise.sets} sets)
-                          </p>
-                          <button
-                            onClick={handleSkipExercise}
-                            className="px-4 py-2 border border-red-500 text-red-500 font-semibold rounded-lg hover:bg-red-50 transition-all duration-200"
-                          >
-                            Skip Exercise
-                          </button>
-                        </>
-                      )}
+                      <>
+                        <h3 className="text-2xl font-bold text-gray-800">NEXT UP</h3>
+                        <p className="text-4xl font-bold text-blue-600 mt-2">{selectedExercise.name}</p>
+                        <p className="text-2xl text-gray-500 mt-1">
+                          {selectedExercise.sets} SETS &times; {selectedExercise.reps} REPS
+                        </p>
+                        <p className="text-md text-gray-400 mt-1">
+                          (Completed: {selectedExercise.completedSets} of {selectedExercise.sets} sets)
+                        </p>
+                        <button
+                          onClick={handleSkipExercise}
+                          className="mt-4 px-4 py-2 border border-red-500 text-red-500 font-semibold rounded-lg hover:bg-red-50 transition-all duration-200"
+                        >
+                          Skip Exercise
+                        </button>
+                      </>
                     </div>
                   )}
                 </div>
 
-                {!isTracking && !isWorkoutDone && (
+                {!isTracking && (
                   <div className="flex justify-center items-center mt-4 gap-4">
                     <button
                       onClick={() => setIsTracking(true)}
@@ -302,25 +274,43 @@ const WorkoutSession: React.FC = () => {
                 <aside className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
                   <h3 className="text-lg font-semibold mb-4 text-gray-700">This Session</h3>
                   <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                    {sessionExercises.map((exercise) => (
-                      <div
-                        key={exercise.id}
-                        className={`p-4 rounded-md border-2 transition-all duration-200 relative overflow-hidden ${
-                          selectedExerciseId === exercise.id
-                            ? 'bg-blue-50 border-blue-500 shadow-sm'
-                            : 'bg-white border-gray-200'
-                        }`}
-                      >
-                        <div
-                          className="absolute top-0 left-0 h-full bg-green-200 transition-all duration-300"
-                          style={{ width: `${(exercise.completedSets / exercise.sets) * 100}%` }}
-                        ></div>
-                        <div className="relative z-10">
-                          <p className="font-semibold text-blue-600">{exercise.name}</p>
-                          <p className="text-sm text-gray-500">{`${exercise.sets} Sets, ${exercise.reps} Reps`}</p>
-                        </div>
-                      </div>
-                    ))}
+                    {sessionExercises.map((exercise) => {
+                      const isCompleted = exercise.completedSets >= exercise.sets;
+
+                      if (isCompleted) {
+                        // Render a special card for completed exercises
+                        return (
+                          <div
+                            key={exercise.id}
+                            className="p-4 rounded-md border-2 transition-all duration-200 bg-green-100 border-green-300"
+                          >
+                            <p className="font-semibold text-green-800">{exercise.name}</p>
+                            <p className="text-sm text-green-600">{`${exercise.sets} Sets, ${exercise.reps} Reps`}</p>
+                          </div>
+                        );
+                      } else {
+                        // Render the standard card for in-progress exercises
+                        return (
+                          <div
+                            key={exercise.id}
+                            className={`p-4 rounded-md border-2 transition-all duration-200 relative overflow-hidden ${
+                              selectedExerciseId === exercise.id
+                                ? 'bg-blue-50 border-blue-500 shadow-sm'
+                                : 'bg-white border-gray-200'
+                            }`}
+                          >
+                            <div
+                              className="absolute top-0 left-0 h-full bg-blue-100 transition-all duration-300"
+                              style={{ width: `${(exercise.completedSets / exercise.sets) * 100}%` }}
+                            ></div>
+                            <div className="relative z-10">
+                              <p className="font-semibold text-blue-600">{exercise.name}</p>
+                              <p className="text-sm text-gray-500">{`${exercise.sets} Sets, ${exercise.reps} Reps`}</p>
+                            </div>
+                          </div>
+                        );
+                      }
+                    })}
                   </div>
                 </aside>
                 <section className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">

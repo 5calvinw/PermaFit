@@ -54,7 +54,7 @@ export class MyAppDatabase extends Dexie {
       // "++" defines an auto-incrementing primary key.
       users: '++userID, name',
       sessions: '++sessionID, day, *detailIDs', // "*" creates a multi-entry index for arrays.
-      details: 'detailID, movementID', // Schema definition for keys/indexes is unchanged
+      details: '++detailID, movementID', // Schema definition for keys/indexes is unchanged
       movement: 'movementID, configKey',
     });
 
@@ -68,8 +68,8 @@ export class MyAppDatabase extends Dexie {
       console.log('Database is being populated for the first time. Seeding...');
       // Use bulkPut to respect the explicit primary keys in the seed data
       await this.movement.bulkPut(initialMovements);
-      await this.sessions.bulkAdd(mySession); // bulkAdd is fine for auto-incrementing keys
-      await this.details.bulkPut(dummyDetails);
+
+   
       console.log('Initial data has been successfully added.');
     } catch (error) {
       console.error(`Failed to populate database: ${error}`);

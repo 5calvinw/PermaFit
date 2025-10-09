@@ -307,7 +307,7 @@ export default function SchedulesPage() {
             </div>
           </div>
           <div className="bg-white p-8 shadow-xl rounded-xl">
-            <h2 className="text-xl font-bold text-gray-800">Availability</h2>
+            <h2 className="text-xl font-bold text-gray-800">Availability (Choose more than 1 day!)</h2>
             <p className="text-gray-600 mt-1 mb-4">
               Tell us about your availability so that we can give you the best possible schedule.
             </p>

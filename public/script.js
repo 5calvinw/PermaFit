@@ -184,7 +184,6 @@ const UI_CONFIG = {
   pace_bar: { x: 300, y: 660, w: 730, h: 30 },
 };
 
-// ADDED: Define clickable area for the skip button
 const skip_button_area = { x: 540, y: 550, w: 200, h: 60 };
 
 // ===============================================================
@@ -486,7 +485,6 @@ function draw_rep_counter(ctx, good_reps, bad_reps) {
   ctx.font = 'bold 60px Arial';
   ctx.fillText(String(bad_reps).padStart(2, '0'), x + 45, y + 260);
 }
-// MODIFIED: This function now handles changing text and drawing a skip button
 function draw_rest_screen(ctx, remaining_time, main_text = 'REST', show_skip_button = false) {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
   ctx.fillRect(0, 0, 1280, 720);
@@ -579,16 +577,14 @@ window.setWorkoutPlan = (plan) => {
   console.log('Workout plan loaded into script:', workout_plan);
 };
 
-window.startPoseTracker = (videoElement, canvasElement, controlsElement, initialSet = 1) => {
-  // MODIFIED: Accept elements as arguments
+window.startPoseTracker = (videoElement, canvasElement, controlsElement, initialExerciseName, initialSet = 1) => {
   if (window.isPoseTrackerActive) return;
 
-  // ADDED: Check if elements were passed correctly
   if (!videoElement || !canvasElement || !controlsElement) {
     console.error('PoseTracker failed: Required DOM elements were not provided.');
     return;
   }
-  console.log('Starting Pose Tracker with provided elements...');
+  console.log(`Starting Pose Tracker for: ${initialExerciseName} at set ${initialSet}`);
 
   const canvasCtx = canvasElement.getContext('2d');
 
@@ -630,14 +626,12 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement, initial
         draw_countdown(canvasCtx, Math.ceil(countdown_duration - time_since_start));
       }
     } else if (program_state === 'RESTING') {
-      // MODIFIED: Logic for changing text and showing skip button
       draw_header_info(canvasCtx, current_exercise_name, set_info);
       const time_since_start = Date.now() / 1000 - rest_start_time;
       const remaining_time = Math.ceil(rest_duration - time_since_start);
 
       if (time_since_start >= rest_duration) {
-        // Reset for the next set
-        resetState(current_exercise_name, false); // false = don't reset set counter
+        resetState(current_exercise_name, false);
       } else {
         let mainText = 'REST';
         if (remaining_time <= 3) {
@@ -661,10 +655,8 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement, initial
         draw_active_landmarks(canvasCtx, lmList, exercise_handler.landmarks, ui_data.angle);
       }
 
-      // --- SET AND REP LOGIC ---
       const total_reps_done = ui_data.good_reps + ui_data.bad_reps;
       if (total_reps_done >= target_reps) {
-        // Dispatch a custom event with the results of the set
         window.dispatchEvent(
           new CustomEvent('setFinished', {
             detail: {
@@ -680,7 +672,7 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement, initial
         if (current_set > target_sets) {
           console.log(`${current_exercise_name} finished. Notifying React.`);
           window.dispatchEvent(new Event('exerciseFinished'));
-          program_state = 'FINISHED'; // Stop processing
+          program_state = 'FINISHED';
         } else {
           program_state = 'RESTING';
           rest_start_time = Date.now() / 1000;
@@ -709,7 +701,6 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement, initial
       target_sets = 3;
     }
 
-    // MODIFIED: Use the provided starting set number
     current_set = reset_set_counter ? startingSet : current_set;
 
     exercise_handler = new Exercise(EXERCISE_CONFIG[current_exercise_name]);
@@ -721,7 +712,6 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement, initial
     if (e.target.tagName !== 'BUTTON') return;
     const new_exercise = e.target.id.replace('btn-', '');
     if (new_exercise !== current_exercise_name) {
-      // MODIFIED: Use the passed-in controlsElement to find the buttons
       controlsElement.querySelectorAll('.exercise-btn').forEach((btn) => btn.classList.remove('active'));
       e.target.classList.add('active');
       resetState(new_exercise, true);
@@ -750,7 +740,6 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement, initial
   });
   camera.start();
 
-  // ADDED: Click listener on the canvas for the skip button
   const handleCanvasClick = (event) => {
     if (program_state !== 'RESTING') return;
 
@@ -763,7 +752,7 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement, initial
     const btn = skip_button_area;
     if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
       console.log('Skip button clicked! Ending rest.');
-      resetState(current_exercise_name, false); // End rest immediately
+      resetState(current_exercise_name, false);
     }
   };
 
@@ -772,7 +761,7 @@ window.startPoseTracker = (videoElement, canvasElement, controlsElement, initial
 
   window.poseTrackerInstances = { pose, camera, listener: handleButtonClick, canvasClickListener: handleCanvasClick };
 
-  resetState(workout_plan[0]?.configKey || 'bicep_curl', true, initialSet);
+  resetState(initialExerciseName, true, initialSet);
   window.isPoseTrackerActive = true;
 };
 
@@ -780,42 +769,34 @@ window.stopPoseTracker = () => {
   if (!window.isPoseTrackerActive || !window.poseTrackerInstances) return;
   console.log('Stopping Pose Tracker...');
 
-  // MODIFIED: Destructure canvasClickListener to remove it
   const { pose, listener, canvasClickListener } = window.poseTrackerInstances;
   const controlsElement = document.querySelector('.controls');
   const videoElement = document.querySelector('.input_video');
   const canvasElement = document.querySelector('.output_canvas');
 
-  // --- CORRECTED SECTION ---
-  // Stop the camera stream by stopping all of its tracks.
   if (videoElement && videoElement.srcObject) {
     const stream = videoElement.srcObject;
     const tracks = stream.getTracks();
-    tracks.forEach((track) => track.stop()); // This turns off the camera light
+    tracks.forEach((track) => track.stop());
     videoElement.srcObject = null;
   }
 
-  // Close the pose model instance
   if (pose) {
     pose.close();
   }
 
-  // Remove the event listener
   if (controlsElement && listener) {
     controlsElement.removeEventListener('click', listener);
   }
-  // ADDED: Remove the canvas click listener
   if (canvasElement && canvasClickListener) {
     canvasElement.removeEventListener('click', canvasClickListener);
   }
 
-  // Clear the canvas
   if (canvasElement) {
     const canvasCtx = canvasElement.getContext('2d');
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
   }
 
-  // Reset state
   window.isPoseTrackerActive = false;
   window.poseTrackerInstances = null;
 };

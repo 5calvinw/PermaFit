@@ -13,11 +13,12 @@ type ExercisePlan = {
 // Define types for the global functions we created in script.js
 declare global {
   interface Window {
-    // MODIFIED: Added the initialSet parameter to allow resuming a workout
+    // MODIFIED: Added the initialExerciseName parameter to fix the sync issue
     startPoseTracker: (
       videoEl: HTMLVideoElement,
       canvasEl: HTMLCanvasElement,
       controlsEl: HTMLDivElement,
+      initialExerciseName: string,
       initialSet: number
     ) => void;
     stopPoseTracker: () => void;
@@ -29,7 +30,7 @@ declare global {
 type PoseTrackerProps = {
   exerciseName: string;
   workoutPlan: ExercisePlan[];
-  initialSet: number; // ADDED: Prop to specify which set to start on
+  initialSet: number;
 };
 
 const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName, workoutPlan, initialSet }) => {
@@ -46,11 +47,13 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName, workoutPlan, in
     // Pass the DOM elements directly from the refs, along with the initial set number
     if (videoRef.current && canvasRef.current && controlsRef.current) {
       if (typeof window.startPoseTracker === 'function') {
-        // MODIFIED: Pass the initialSet prop to the tracker's start function
-        window.startPoseTracker(videoRef.current, canvasRef.current, controlsRef.current, initialSet);
+        // MODIFIED: Pass the exerciseName prop to the tracker's start function
+        // This ensures the tracker initializes with the correct exercise from React's state.
+        window.startPoseTracker(videoRef.current, canvasRef.current, controlsRef.current, exerciseName, initialSet);
       }
     }
 
+    // Cleanup function to stop the tracker when the component unmounts
     return () => {
       if (typeof window.stopPoseTracker === 'function') {
         window.stopPoseTracker();
@@ -58,7 +61,7 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName, workoutPlan, in
     };
   }, []); // This effect should only run once when the component mounts
 
-  // This effect remains to handle SWITCHING exercises while the tracker is active
+  // This effect handles SWITCHING exercises while the tracker is already active
   useEffect(() => {
     if (window.isPoseTrackerActive) {
       const buttonId = `btn-${exerciseName}`;
@@ -76,7 +79,7 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName, workoutPlan, in
       <video ref={videoRef} className="input_video hidden" width="1280" height="720"></video>
       <canvas ref={canvasRef} className="output_canvas w-full h-full" width="1280" height="720"></canvas>
 
-      {/* Attach the ref to the controls div */}
+      {/* Attach the ref to the controls div. These buttons are used by script.js to switch exercises. */}
       <div ref={controlsRef} className="controls hidden">
         <button id="btn-bicep_curl" className="exercise-btn">
           Bicep Curl
@@ -89,6 +92,9 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName, workoutPlan, in
         </button>
         <button id="btn-glute_bridge" className="exercise-btn">
           Glute Bridge
+        </button>
+        <button id="btn-seated_leg_raise" className="exercise-btn">
+          Seated Leg Raise
         </button>
       </div>
     </div>

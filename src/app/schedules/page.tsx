@@ -16,25 +16,34 @@ interface Session {
 }
 
 function getThisWeeksDateForDay(targetDay: string): Date {
-  const dayMapping: { [key: string]: number } = {
-    SUNDAY: 0,
-    MONDAY: 1,
-    TUESDAY: 2,
-    WEDNESDAY: 3,
-    THURSDAY: 4,
-    FRIDAY: 5,
-    SATURDAY: 6,
+  const dayOffsetFromMonday: { [key: string]: number } = {
+    MONDAY: 0,
+    TUESDAY: 1,
+    WEDNESDAY: 2,
+    THURSDAY: 3,
+    FRIDAY: 4,
+    SATURDAY: 5,
+    SUNDAY: 6,
   };
-  if (!targetDay) return new Date();
-  const targetDayIndex = dayMapping[targetDay.toUpperCase()];
-  if (targetDayIndex === undefined) return new Date();
+
+  const upperCaseTargetDay = targetDay?.toUpperCase();
+  if (!upperCaseTargetDay || dayOffsetFromMonday[upperCaseTargetDay] === undefined) {
+    return new Date();
+  }
+
+  const offset = dayOffsetFromMonday[upperCaseTargetDay];
   const today = new Date();
   const todayDayIndex = today.getDay();
+
   const mondayOfThisWeek = new Date(today);
-  mondayOfThisWeek.setDate(today.getDate() - todayDayIndex + (todayDayIndex === 0 ? -6 : 1));
+  mondayOfThisWeek.setHours(0, 0, 0, 0);
+
+  const daysToSubtract = todayDayIndex === 0 ? 6 : todayDayIndex - 1;
+  mondayOfThisWeek.setDate(today.getDate() - daysToSubtract);
+
   const targetDate = new Date(mondayOfThisWeek);
-  targetDate.setDate(mondayOfThisWeek.getDate() + (targetDayIndex - dayMapping.MONDAY));
-  targetDate.setHours(0, 0, 0, 0);
+  targetDate.setDate(mondayOfThisWeek.getDate() + offset);
+
   return targetDate;
 }
 

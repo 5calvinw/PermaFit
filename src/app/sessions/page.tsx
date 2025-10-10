@@ -22,7 +22,7 @@ type Exercise = {
 const NoSessionCard: React.FC = () => {
   return (
     <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-      <h2 className="text-3xl font-bold text-gray-800">No sessions are ongoing.</h2>
+      <h2 className="text-3xl font-bold text-gray-800">No session Today.</h2>
       <p className="mt-1 text-gray-500">Go to your workout schedule and start a session now</p>
       <Link
         href="/schedules"

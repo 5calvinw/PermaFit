@@ -6,21 +6,24 @@ import { db } from '../lib/db';
 import Sidebar from '../../components/sidebar';
 import WorkoutSessionCard from '../../components/scheduleBox';
 
-// ✨ THIS INTERFACE IS UPDATED TO MATCH YOUR DATABASE ✨
 interface Session {
-  sessionID?: number; // Changed to optional to allow 'undefined'
+  sessionID?: number;
   day: string;
   time: string;
-  detailIDs: number[]; // Corrected property name from detailID to detailIDs
+  detailIDs: number[];
   calculatedDate: Date;
   isCompleted?: boolean;
 }
 
-// ... (No other changes are needed in the rest of the file) ...
-
 function getThisWeeksDateForDay(targetDay: string): Date {
   const dayMapping: { [key: string]: number } = {
-    SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6,
+    SUNDAY: 0,
+    MONDAY: 1,
+    TUESDAY: 2,
+    WEDNESDAY: 3,
+    THURSDAY: 4,
+    FRIDAY: 5,
+    SATURDAY: 6,
   };
   if (!targetDay) return new Date();
   const targetDayIndex = dayMapping[targetDay.toUpperCase()];
@@ -59,6 +62,7 @@ const getSessionStatus = (session: Session): 'COMPLETED' | 'TODAY' | 'UPCOMING' 
 
 export default function SchedulesPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -74,6 +78,8 @@ export default function SchedulesPage() {
         }
       } catch (error) {
         console.error('Failed to fetch sessions:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchSessions();
@@ -84,28 +90,64 @@ export default function SchedulesPage() {
       <Sidebar />
       <main className="flex-1 bg-slate-100 p-8 ml-72">
         <div className="flex flex-col bg-white p-8 shadow-xl rounded-xl gap-4">
-          <div className="text-2xl font-bold text-black">This Week</div>
-          <div className="text-xl text-black">See your exercise dates and times. Start, reschedule, or skip as needed.</div>
-          {sessions.map((session, index) => {
-            const { day, dateNum, month } = formatDateParts(session.calculatedDate);
-            const status = getSessionStatus(session);
-            return (
-              <Link
-                key={session.sessionID}
-                href={`/workout`}
-                className="block hover:bg-gray-50 rounded-xl transition-colors duration-200"
-              >
+          <div className="text-2xl font-bold text-black">This Week's Schedule</div>
+          <p className="text-gray-600 mb-4">
+            Here are your scheduled workouts. You can only start a session on its scheduled day.
+          </p>
+
+          {isLoading ? (
+            <p className="text-center py-10 text-gray-500">Loading your schedule...</p>
+          ) : sessions.length > 0 ? (
+            sessions.map((session, index) => {
+              const { day, dateNum, month } = formatDateParts(session.calculatedDate);
+              const status = getSessionStatus(session);
+              const isClickable = status === 'TODAY';
+
+              const cardContent = (
                 <WorkoutSessionCard
                   day={day}
                   date={dateNum}
                   month={month}
-                  title={`Workout Session ${index + 1}`}
+                  title={`Workout Session`}
                   status={status}
                   scheduledTime={session.time}
                 />
+              );
+
+              if (isClickable) {
+                return (
+                  <Link
+                    key={session.sessionID}
+                    href={`/sessions`}
+                    className="block hover:bg-gray-50 rounded-xl transition-colors duration-200 cursor-pointer"
+                  >
+                    {cardContent}
+                  </Link>
+                );
+              } else {
+                return (
+                  <div
+                    key={session.sessionID}
+                    className="block rounded-xl"
+                    style={{ opacity: status === 'COMPLETED' || status === 'MISSED' ? 0.6 : 1 }}
+                  >
+                    {cardContent}
+                  </div>
+                );
+              }
+            })
+          ) : (
+            <div className="text-center py-10 text-gray-500 border-2 border-dashed rounded-lg">
+              <p className="text-xl font-semibold">Your Schedule is Empty</p>
+              <p className="mt-2">Complete your onboarding to create a personalized workout plan!</p>
+              <Link
+                href="/onboarding"
+                className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700"
+              >
+                Go to Onboarding
               </Link>
-            );
-          })}
+            </div>
+          )}
         </div>
       </main>
     </div>

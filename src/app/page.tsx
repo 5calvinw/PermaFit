@@ -7,7 +7,6 @@ import Sidebar from '../components/sidebar';
 import { IoIosCheckmarkCircle } from 'react-icons/io';
 import { FaSquareXmark, FaClockRotateLeft, FaTrophy } from 'react-icons/fa6';
 
-// IMPORT Chart.js components
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -21,16 +20,13 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
-// REGISTER Chart.js components for use
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-interface UpcomingMovement {
+interface UpcomingExercise {
   detailID: number;
   name: string;
   day: string;
   time: string;
-  calculatedDate: Date;
-  isCompleted: boolean;
 }
 
 export default function Home() {
@@ -43,9 +39,8 @@ export default function Home() {
     topWorkout: 'N/A',
   });
 
-  const [upcomingMovements, setUpcomingMovements] = useState<UpcomingMovement[]>([]);
+  const [upcomingExercises, setUpcomingExercises] = useState<UpcomingExercise[]>([]);
 
-  // ADD new state for the history graph
   const [allMovementsList, setAllMovementsList] = useState<IMovement[]>([]);
   const [selectedMovementId, setSelectedMovementId] = useState<number | null>(null);
   const [chartData, setChartData] = useState<ChartData<'line'>>({
@@ -59,115 +54,114 @@ export default function Home() {
         const userCount = await db.users.count();
         if (userCount === 0) {
           router.push('/onboarding');
-        } else {
-          const allSessions = await db.sessions.toArray();
-          const allDetails = await db.details.toArray();
-          const allMovements = await db.movement.toArray();
-          const now = new Date();
+          return;
+        }
 
-          // POPULATE movements list for the dropdown
-          if (allMovements.length > 0) {
-            setAllMovementsList(allMovements);
-            // Set a default selection for the graph
-            if (!selectedMovementId) {
-              setSelectedMovementId(allMovements[0].movementID!);
-            }
+        const allSessions = await db.sessions.toArray();
+        const allDetails = await db.details.toArray();
+        const allMovements = await db.movement.toArray();
+        const now = new Date();
+
+        if (allMovements.length > 0) {
+          setAllMovementsList(allMovements);
+          if (!selectedMovementId) {
+            setSelectedMovementId(allMovements[0].movementID!);
           }
+        }
 
-          const newStats = { completedThisWeek: 0, missedThisWeek: 0, repsDone: 0, topWorkout: 'N/A' };
-          const getWeekBoundaries = () => {
-            const today = now.getDay();
-            const startOfWeek = new Date(now);
-            startOfWeek.setDate(now.getDate() - today + (today === 0 ? -6 : 1));
-            startOfWeek.setHours(0, 0, 0, 0);
-            const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(startOfWeek.getDate() + 6);
-            endOfWeek.setHours(23, 59, 59, 999);
-            return { startOfWeek, endOfWeek };
+        const getThisWeeksDateForDay = (dayString: string): Date => {
+          const dayMapping: { [key: string]: number } = {
+            SUNDAY: 0,
+            MONDAY: 1,
+            TUESDAY: 2,
+            WEDNESDAY: 3,
+            THURSDAY: 4,
+            FRIDAY: 5,
+            SATURDAY: 6,
           };
-          const parseSessionDate = (session: ISession): Date => {
-            const dayMapping: { [key: string]: number } = {
-              MONDAY: 1,
-              TUESDAY: 2,
-              WEDNESDAY: 3,
-              THURSDAY: 4,
-              FRIDAY: 5,
-              SATURDAY: 6,
-              SUNDAY: 0,
-            };
-            const { startOfWeek } = getWeekBoundaries();
-            const sessionDate = new Date(startOfWeek);
-            const targetDayIndex = dayMapping[session.day.toUpperCase()];
-            const startDayIndex = startOfWeek.getDay();
-            sessionDate.setDate(startOfWeek.getDate() + (targetDayIndex - (startDayIndex === 0 ? 7 : startDayIndex)));
-            const [hours, minutes] = session.time.split(':').map(Number);
-            sessionDate.setHours(hours, minutes, 0, 0);
-            if (sessionDate < now) {
-              sessionDate.setDate(sessionDate.getDate() + 7);
-            }
-            return sessionDate;
-          };
-          const { startOfWeek, endOfWeek } = getWeekBoundaries();
-          const sessionsThisWeek = allSessions.filter((s) => {
-            const sessionDate = parseSessionDate(s);
-            const originalDate = new Date(sessionDate);
-            originalDate.setDate(sessionDate.getDate() - 7);
-            return (
-              (sessionDate >= startOfWeek && sessionDate <= endOfWeek) ||
-              (originalDate >= startOfWeek && originalDate <= endOfWeek)
-            );
-          });
-          sessionsThisWeek.forEach((session) => {
-            const detailsForSession = allDetails.filter((d) => session.detailIDs.includes(d.detailID!));
-            const isCompleted =
-              detailsForSession.length > 0 && detailsForSession.every((d) => d.completedSets >= d.totalSets);
-            if (isCompleted) {
+          const targetDayIndex = dayMapping[dayString.toUpperCase()];
+          const today = new Date();
+          const todayDayIndex = today.getDay();
+          const monday = new Date(today);
+          monday.setDate(today.getDate() - todayDayIndex + (todayDayIndex === 0 ? -6 : 1));
+          monday.setHours(0, 0, 0, 0);
+          const targetDate = new Date(monday);
+          targetDate.setDate(monday.getDate() + (targetDayIndex - 1));
+          return targetDate;
+        };
+
+        const getWeekBoundaries = () => {
+          const today = now.getDay();
+          const startOfWeek = new Date(now);
+          startOfWeek.setDate(now.getDate() - today + (today === 0 ? -6 : 1));
+          startOfWeek.setHours(0, 0, 0, 0);
+          const endOfWeek = new Date(startOfWeek);
+          endOfWeek.setDate(startOfWeek.getDate() + 6);
+          endOfWeek.setHours(23, 59, 59, 999);
+          return { startOfWeek, endOfWeek };
+        };
+
+        const { startOfWeek, endOfWeek } = getWeekBoundaries();
+        const newStats = { completedThisWeek: 0, missedThisWeek: 0, repsDone: 0, topWorkout: 'N/A' };
+
+        allSessions.forEach((session) => {
+          const sessionDate = getThisWeeksDateForDay(session.day);
+          if (sessionDate >= startOfWeek && sessionDate <= endOfWeek) {
+            if (session.isCompleted) {
               newStats.completedThisWeek++;
-            } else if (parseSessionDate(session) < new Date()) {
+            } else if (sessionDate < now) {
               newStats.missedThisWeek++;
             }
-          });
+          }
+        });
 
-          // This calculation already sums only the 'goodRep' property from your data
-          newStats.repsDone = allDetails.reduce((sum, detail) => sum + detail.goodRep, 0);
+        const allUpcomingExercises: UpcomingExercise[] = [];
+        const upcomingSessions = allSessions
+          .map((session) => ({
+            ...session,
+            calculatedDate: getThisWeeksDateForDay(session.day),
+          }))
+          .filter((session) => !session.isCompleted && session.calculatedDate > now)
+          .sort((a, b) => a.calculatedDate.getTime() - b.calculatedDate.getTime());
 
-          if (allDetails.length > 0 && allMovements.length > 0) {
-            const movementCounts: { [key: number]: number } = {};
-            allDetails.forEach((detail) => {
-              if (detail.goodRep > 0) {
-                movementCounts[detail.movementID] = (movementCounts[detail.movementID] || 0) + detail.goodRep;
+        for (const session of upcomingSessions) {
+          for (const detailId of session.detailIDs) {
+            const detail = allDetails.find((d) => d.detailID === detailId);
+            if (detail) {
+              const movement = allMovements.find((m) => m.movementID === detail.movementID);
+              if (movement) {
+                allUpcomingExercises.push({
+                  detailID: detail.detailID!,
+                  name: movement.movementName,
+                  day: session.day,
+                  time: session.time,
+                });
               }
-            });
-            if (Object.keys(movementCounts).length > 0) {
-              const topMovementId = Object.keys(movementCounts).reduce((a, b) =>
-                movementCounts[parseInt(a)] > movementCounts[parseInt(b)] ? a : b
-              );
-              const topMovement = allMovements.find((m) => m.movementID === parseInt(topMovementId));
-              if (topMovement) newStats.topWorkout = topMovement.movementName;
             }
           }
-          setStats(newStats);
-          const allPotentialMovements = allDetails
-            .map((detail) => {
-              const parentSession = allSessions.find((s) => s.detailIDs.includes(detail.detailID!));
-              const movementInfo = allMovements.find((m) => m.movementID === detail.movementID);
-              if (!parentSession || !movementInfo) return null;
-              return {
-                detailID: detail.detailID!,
-                name: movementInfo.movementName,
-                day: parentSession.day,
-                time: parentSession.time,
-                calculatedDate: parseSessionDate(parentSession),
-                isCompleted: detail.completedSets >= detail.totalSets,
-              };
-            })
-            .filter((item): item is NonNullable<typeof item> => item !== null);
-          const nextFiveMovements = allPotentialMovements
-            .filter((move) => !move.isCompleted && move.calculatedDate > now)
-            .sort((a, b) => a.calculatedDate.getTime() - b.calculatedDate.getTime())
-            .slice(0, 5);
-          setUpcomingMovements(nextFiveMovements);
         }
+
+        setUpcomingExercises(allUpcomingExercises.slice(0, 5));
+
+        newStats.repsDone = allDetails.reduce((sum, detail) => sum + detail.goodRep, 0);
+
+        if (allDetails.length > 0 && allMovements.length > 0) {
+          const movementCounts: { [key: number]: number } = {};
+          allDetails.forEach((detail) => {
+            if (detail.goodRep > 0) {
+              movementCounts[detail.movementID] = (movementCounts[detail.movementID] || 0) + detail.goodRep;
+            }
+          });
+          if (Object.keys(movementCounts).length > 0) {
+            const topMovementId = Object.keys(movementCounts).reduce((a, b) =>
+              movementCounts[parseInt(a)] > movementCounts[parseInt(b)] ? a : b
+            );
+            const topMovement = allMovements.find((m) => m.movementID === parseInt(topMovementId));
+            if (topMovement) newStats.topWorkout = topMovement.movementName;
+          }
+        }
+
+        setStats(newStats);
       } catch (error) {
         console.error('Failed to check for user or fetch stats:', error);
       }
@@ -236,7 +230,6 @@ export default function Home() {
                 color="red"
               />
 
-              {/* ✨ UPDATED: Changed the label to be more specific */}
               <StatBox
                 icon={<FaClockRotateLeft />}
                 value={`${stats.repsDone} Reps`}
@@ -252,9 +245,10 @@ export default function Home() {
             <h2 className="text-3xl font-bold text-black">Workout Plan</h2>
             <p className="text-lg text-slate-600">Your next 5 upcoming exercises.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {upcomingMovements.length > 0 ? (
-                upcomingMovements.map((move) => (
-                  <MoveBox key={move.detailID} name={move.name} day={move.day} time={move.time} />
+              {/* ✨ FIXED: Updated to use the new state variable and key */}
+              {upcomingExercises.length > 0 ? (
+                upcomingExercises.map((exercise) => (
+                  <MoveBox key={exercise.detailID} name={exercise.name} day={exercise.day} time={exercise.time} />
                 ))
               ) : (
                 <p className="text-gray-500 col-span-full text-center py-4">No upcoming workouts scheduled.</p>

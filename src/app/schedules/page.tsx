@@ -90,7 +90,14 @@ export default function SchedulesPage() {
       <Sidebar />
       <main className="flex-1 bg-slate-100 p-8 ml-72">
         <div className="flex flex-col bg-white p-8 shadow-xl rounded-xl gap-4">
-          <div className="text-2xl font-bold text-black">This Week's Schedule</div>
+          <div className="flex justify-between items-center">
+            <div className="text-2xl font-bold text-black">This Week's Schedule</div>
+            <Link href="/schedules/edit">
+              <span className="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
+                Edit Schedule
+              </span>
+            </Link>
+          </div>
           <p className="text-gray-600 mb-4">
             Here are your scheduled workouts. You can only start a session on its scheduled day.
           </p>

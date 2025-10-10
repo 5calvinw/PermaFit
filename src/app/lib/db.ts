@@ -1,9 +1,7 @@
-// src/lib/db.ts
 import Dexie, { Table } from 'dexie';
-// ✨ We only need to import the movements for seeding now
 import { initialMovements } from './seedData';
+import { Availability } from '../../components/AvailabilitySelector';
 
-// ... (All your interfaces remain the same)
 export interface IUser {
   userID?: number;
   name: string;
@@ -12,6 +10,7 @@ export interface IUser {
   weight: number;
   health: string;
   preferredFrequency: string;
+  availability?: Availability; 
 }
 export interface ISession {
   sessionID?: number;
@@ -46,8 +45,8 @@ export class MyAppDatabase extends Dexie {
 
   constructor() {
     super('MyAppDatabase');
-    this.version(2).stores({
-      users: '++userID, name',
+    this.version(3).stores({
+      users: '++userID, name, availability',
       sessions: '++sessionID, [day+isCompleted], day, *detailIDs',
       details: '++detailID, movementID',
       movement: '++movementID, configKey',

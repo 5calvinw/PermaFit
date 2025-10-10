@@ -62,7 +62,6 @@ export default function Home() {
         const allMovements = await db.movement.toArray();
         const now = new Date();
 
-        // ✨ FIXED: Define the start of today for accurate "missed" calculation
         const startOfToday = new Date(now);
         startOfToday.setHours(0, 0, 0, 0);
 
@@ -113,7 +112,6 @@ export default function Home() {
           if (sessionDate >= startOfWeek && sessionDate <= endOfWeek) {
             if (session.isCompleted) {
               newStats.completedThisWeek++;
-              // ✨ FIXED: Updated logic to check against the start of today
             } else if (sessionDate < startOfToday) {
               newStats.missedThisWeek++;
             }

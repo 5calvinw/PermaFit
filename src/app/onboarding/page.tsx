@@ -46,7 +46,7 @@ const createInitialAvailability = (): Availability => {
  * @param {number} sessions - The desired number of sessions per week.
  * @returns {ScheduleSlot[]} An array of selected schedule slots.
  */
-function pickSchedule(availability: FormattedAvailability, sessions: number): ScheduleSlot[] {
+function pickSchedule(availability: FormattedAvailability, sessions: number, today: Day): ScheduleSlot[] {
   const dayOrder: Record<string, number> = {
     Monday: 1,
     Tuesday: 2,
@@ -57,9 +57,19 @@ function pickSchedule(availability: FormattedAvailability, sessions: number): Sc
     Sunday: 7,
   };
 
+  const todayIndex = dayOrder[today];
+
   const allAvailableSlots = Object.entries(availability)
     .flatMap(([day, slots]) => slots.map((time) => ({ dayIndex: dayOrder[day], day, time })))
-    .sort((a, b) => a.dayIndex - b.dayIndex || a.time.localeCompare(b.time));
+    .sort((a, b) => {
+      const aIsUpcoming = a.dayIndex >= todayIndex;
+      const bIsUpcoming = b.dayIndex >= todayIndex;
+
+      if (aIsUpcoming && !bIsUpcoming) return -1;
+      if (!aIsUpcoming && bIsUpcoming) return 1;
+
+      return a.dayIndex - b.dayIndex || a.time.localeCompare(b.time);
+    });
 
   const uniqueDaySlotsMap = new Map<string, { dayIndex: number; day: string; time: string }>();
   for (const slot of allAvailableSlots) {
@@ -203,7 +213,7 @@ export default function SchedulesPage() {
         });
 
         if (sessionsPerWeek > 0 && Object.keys(formattedAvailability).length > 0) {
-          const generatedSchedule = pickSchedule(formattedAvailability, sessionsPerWeek);
+          const generatedSchedule = pickSchedule(formattedAvailability, sessionsPerWeek, today);
           const movementOrder = [1, 3, 2, 5, 4];
 
           for (const scheduleItem of generatedSchedule) {

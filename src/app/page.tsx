@@ -62,6 +62,10 @@ export default function Home() {
         const allMovements = await db.movement.toArray();
         const now = new Date();
 
+        // ✨ FIXED: Define the start of today for accurate "missed" calculation
+        const startOfToday = new Date(now);
+        startOfToday.setHours(0, 0, 0, 0);
+
         if (allMovements.length > 0) {
           setAllMovementsList(allMovements);
           if (!selectedMovementId) {
@@ -109,7 +113,8 @@ export default function Home() {
           if (sessionDate >= startOfWeek && sessionDate <= endOfWeek) {
             if (session.isCompleted) {
               newStats.completedThisWeek++;
-            } else if (sessionDate < now) {
+              // ✨ FIXED: Updated logic to check against the start of today
+            } else if (sessionDate < startOfToday) {
               newStats.missedThisWeek++;
             }
           }
@@ -121,7 +126,7 @@ export default function Home() {
             ...session,
             calculatedDate: getThisWeeksDateForDay(session.day),
           }))
-          .filter((session) => !session.isCompleted && session.calculatedDate > now)
+          .filter((session) => !session.isCompleted && session.calculatedDate >= startOfToday)
           .sort((a, b) => a.calculatedDate.getTime() - b.calculatedDate.getTime());
 
         for (const session of upcomingSessions) {
@@ -245,7 +250,6 @@ export default function Home() {
             <h2 className="text-3xl font-bold text-black">Workout Plan</h2>
             <p className="text-lg text-slate-600">Your next 5 upcoming exercises.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {/* ✨ FIXED: Updated to use the new state variable and key */}
               {upcomingExercises.length > 0 ? (
                 upcomingExercises.map((exercise) => (
                   <MoveBox key={exercise.detailID} name={exercise.name} day={exercise.day} time={exercise.time} />

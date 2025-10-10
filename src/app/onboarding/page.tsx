@@ -160,6 +160,16 @@ export default function SchedulesPage() {
         return;
       }
 
+      const today = new Date().toLocaleString('en-US', { weekday: 'long' }) as Day;
+
+      const isTodaySelected =
+        availability[today] && Object.values(availability[today]).some((isSelected) => isSelected);
+
+      if (!isTodaySelected) {
+        alert("FOR DEMO PURPOSES, PICK TODAY's DAY");
+        return;
+      }
+
       try {
         const newUser: IUser = {
           name: formData.name,
@@ -171,7 +181,7 @@ export default function SchedulesPage() {
           availability: availability,
         };
         await db.users.add(newUser);
-        
+
         const sessionsPerWeek = Object.values(availability).filter((daySlots) =>
           Object.values(daySlots).some((isSelected) => isSelected)
         ).length;

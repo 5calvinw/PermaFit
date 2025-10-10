@@ -4,8 +4,6 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { db, IUser, ISession, IDetail } from '../lib/db';
 
-// --- TYPE DEFINITIONS ---
-// Removed exerciseFrequency
 interface IFormData {
   name: string;
   age: string;
@@ -20,7 +18,6 @@ type Availability = Record<Day, Record<TimeBlockLabel, boolean>>;
 type FormattedAvailability = Record<Day, string[]>;
 type ScheduleSlot = { day: string; slot: string };
 
-// --- CONSTANTS & CONFIGURATION ---
 const DAYS_OF_WEEK: Day[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const TIME_BLOCKS = [
@@ -29,7 +26,6 @@ const TIME_BLOCKS = [
   { label: 'Evening', time: '18:00', range: '18:00 - 21:00' },
 ];
 
-// --- HELPER FUNCTIONS (Pure Logic) ---
 
 /**
  * Creates the initial state for the availability grid using time blocks.
@@ -114,15 +110,11 @@ function validateFormData(data: IFormData): string | null {
   if (!weight || weight < 20 || weight > 200) return 'Please enter a valid body weight between 20 and 200 kg.';
   if (data.gender === '') return 'Please select a gender.';
   if (data.healthConditions === '') return 'Please select a health condition option.';
-  // Removed exerciseFrequency check
   return null;
 }
 
-// --- REACT COMPONENT ---
 export default function SchedulesPage() {
   const router = useRouter();
-
-  // Removed exerciseFrequency from initial state
   const [formData, setFormData] = useState<IFormData>({
     name: '',
     age: '',
@@ -169,11 +161,10 @@ export default function SchedulesPage() {
           height: parseInt(formData.height, 10),
           weight: parseInt(formData.bodyWeight, 10),
           health: formData.healthConditions,
-          preferredFrequency: '', // This field can be removed or set to empty
+          preferredFrequency: '',
         };
         await db.users.add(newUser);
 
-        // UPDATE: Calculate sessionsPerWeek based on the number of days selected in availability
         const sessionsPerWeek = Object.values(availability).filter((daySlots) =>
           Object.values(daySlots).some((isSelected) => isSelected)
         ).length;
@@ -303,7 +294,6 @@ export default function SchedulesPage() {
                   <option value="Other">Other</option>
                 </select>
               </div>
-              {/* The exercise frequency dropdown has been removed from here */}
             </div>
           </div>
           <div className="bg-white p-8 shadow-xl rounded-xl">
@@ -314,7 +304,6 @@ export default function SchedulesPage() {
             <div className="space-y-4">
               {DAYS_OF_WEEK.map((day) => (
                 <div key={day} className="grid grid-cols-[100px_1fr] items-center gap-4">
-                  {/* UPDATE: Added text-lg to make the day text larger */}
                   <span className="font-semibold text-gray-700 text-right text-lg">{day}</span>
                   <div className="grid grid-cols-3 gap-4">
                     {TIME_BLOCKS.map((block) => (

@@ -2,6 +2,11 @@
 
 // This file separates the initial database data from the database schema definition.
 
+/* export const initialSessions = [
+  { sessionID: 1, day: 'Monday', time: '09:00', detailIDs: [1, 2, 3, 4], isCompleted: false },
+  { sessionID: 2, day: 'Wednesday', time: '09:00', detailIDs: [5, 6, 7, 8], isCompleted: false },
+  { sessionID: 3, day: 'Friday', time: '09:00', detailIDs: [9, 10, 11, 12], isCompleted: false },
+];
 
 export const dummyDetails = [
   // Detail ID: 1-4 for Monday
@@ -19,7 +24,7 @@ export const dummyDetails = [
   { detailID: 10, movementID: 5, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
   { detailID: 11, movementID: 1, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
   { detailID: 12, movementID: 2, totalSets: 4, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
-];
+]; */
 
 export const initialMovements = [
   {

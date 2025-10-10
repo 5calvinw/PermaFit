@@ -1,9 +1,9 @@
 // src/lib/db.ts
 import Dexie, { Table } from 'dexie';
-// ✨ 1. IMPORT SEED DATA from the new file
-import { initialMovements, mySession, dummyDetails } from './seedData';
+// ✨ We only need to import the movements for seeding now
+import { initialMovements } from './seedData';
 
-// Interfaces for data shapes
+// ... (All your interfaces remain the same)
 export interface IUser {
   userID?: number;
   name: string;
@@ -18,9 +18,8 @@ export interface ISession {
   day: string;
   time: string;
   detailIDs: number[];
+  isCompleted?: boolean;
 }
-
-// MODIFIED: Added completedSets to the IDetail interface
 export interface IDetail {
   detailID?: number;
   movementID: number;
@@ -28,9 +27,8 @@ export interface IDetail {
   totalReps: number;
   goodRep: number;
   badRep: number;
-  completedSets: number; // ADDED THIS LINE
+  completedSets: number;
 }
-
 export interface IMovement {
   movementID?: number;
   movementName: string;
@@ -48,39 +46,29 @@ export class MyAppDatabase extends Dexie {
 
   constructor() {
     super('MyAppDatabase');
-    // MODIFIED: Bumped the version number from 1 to 2
-    // This correctly migrates the database for existing users to the new schema
     this.version(2).stores({
-      // "++" defines an auto-incrementing primary key.
       users: '++userID, name',
-      sessions: '++sessionID, day, *detailIDs', // "*" creates a multi-entry index for arrays.
-      details: '++detailID, movementID', // Schema definition for keys/indexes is unchanged
-      movement: 'movementID, configKey',
+      sessions: '++sessionID, [day+isCompleted], day, *detailIDs',
+      details: '++detailID, movementID',
+      movement: '++movementID, configKey',
     });
 
-    // The populate event only triggers once when the database is first created.
     this.on('populate', () => this.populateDatabase());
   }
 
-  // ✨ 2. POPULATE METHOD now uses the imported data
   async populateDatabase() {
     try {
-      console.log('Database is being populated for the first time. Seeding...');
-      // Use bulkPut to respect the explicit primary keys in the seed data
+      console.log('Database is being populated for the first time. Seeding movements...');
       await this.movement.bulkPut(initialMovements);
-
-   
-      console.log('Initial data has been successfully added.');
+      console.log('✅ Initial movements have been successfully added.');
     } catch (error) {
       console.error(`Failed to populate database: ${error}`);
     }
   }
 }
 
-// ✨ 3. SIMPLIFIED EXPORT
 export const db = new MyAppDatabase();
 
-// Helper function remains unchanged
 export const addUser = async (user: IUser) => {
   return await db.users.add(user);
 };

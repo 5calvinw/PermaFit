@@ -7,7 +7,7 @@ const EXERCISE_CONFIG = {
     landmarks: [12, 14, 16],
     angle_range: [40, 160],
     progress_type: 'normal',
-    timing: { concentric: 2, hold: 1, eccentric: 3, tolerance: 0.7 },
+    timing: { concentric: 2, hold: 1, eccentric: 2, tolerance: 0.5 },
     form_checks: [
       {
         check_type: 'angle',
@@ -31,7 +31,7 @@ const EXERCISE_CONFIG = {
     landmarks: [24, 26, 28],
     angle_range: [90, 175],
     progress_type: 'normal',
-    timing: { concentric: 2, hold: 1, eccentric: 1, tolerance: 1 },
+    timing: { concentric: 1, hold: 1, eccentric: 1, tolerance: 0.5 },
     form_checks: [
       {
         check_type: 'angle',
@@ -62,7 +62,7 @@ const EXERCISE_CONFIG = {
     landmarks: [12, 14, 16],
     angle_range: [90, 160],
     progress_type: 'normal',
-    timing: { concentric: 4, hold: 1, eccentric: 2, tolerance: 0.7 },
+    timing: { concentric: 2, hold: 1, eccentric: 1, tolerance: 0.5 },
     form_checks: [
       {
         check_type: 'angle',
@@ -104,7 +104,7 @@ const EXERCISE_CONFIG = {
     landmarks: [12, 24, 26], // R_Shoulder, R_Hip, R_Knee
     angle_range: [130, 170],
     progress_type: 'inverse',
-    timing: { concentric: 2, hold: 2, eccentric: 3, tolerance: 0.7 },
+    timing: { concentric: 1, hold: 1, eccentric: 1, tolerance: 0.5 },
     form_checks: [
       {
         check_type: 'angle',
@@ -141,7 +141,7 @@ const EXERCISE_CONFIG = {
     landmarks: [24, 26, 28], // R_Hip, R_Knee, R_Ankle
     angle_range: [90, 155],
     progress_type: 'inverse',
-    timing: { concentric: 3, hold: 2, eccentric: 4, tolerance: 0.7 },
+    timing: { concentric: 2, hold: 1, eccentric: 2, tolerance: 0.8 },
     form_checks: [
       {
         check_type: 'angle',

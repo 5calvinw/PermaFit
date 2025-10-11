@@ -37,7 +37,7 @@ export const initialMovements = [
   },
   {
     movementID: 2,
-    movementName: 'Squat',
+    movementName: 'Stand to Sit',
     configKey: 'squat',
     movementDescription: 'A fundamental compound exercise that targets the thighs, hips, and buttocks.',
     movementImage: 'squat.jpg',

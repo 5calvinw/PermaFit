@@ -1,31 +1,3 @@
-// src/lib/seedData.ts
-
-// This file separates the initial database data from the database schema definition.
-
-/* export const initialSessions = [
-  { sessionID: 1, day: 'Monday', time: '09:00', detailIDs: [1, 2, 3, 4], isCompleted: false },
-  { sessionID: 2, day: 'Wednesday', time: '09:00', detailIDs: [5, 6, 7, 8], isCompleted: false },
-  { sessionID: 3, day: 'Friday', time: '09:00', detailIDs: [9, 10, 11, 12], isCompleted: false },
-];
-
-export const dummyDetails = [
-  // Detail ID: 1-4 for Monday
-  { detailID: 1, movementID: 1, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
-  { detailID: 2, movementID: 2, totalSets: 3, totalReps: 15, goodRep: 0, badRep: 0, completedSets: 0 },
-  { detailID: 3, movementID: 3, totalSets: 3, totalReps: 10, goodRep: 0, badRep: 0, completedSets: 0 },
-  { detailID: 4, movementID: 4, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
-  // Detail ID: 5-8 for Wednesday
-  { detailID: 5, movementID: 5, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
-  { detailID: 6, movementID: 1, totalSets: 4, totalReps: 10, goodRep: 0, badRep: 0, completedSets: 0 },
-  { detailID: 7, movementID: 2, totalSets: 3, totalReps: 20, goodRep: 0, badRep: 0, completedSets: 0 },
-  { detailID: 8, movementID: 3, totalSets: 3, totalReps: 15, goodRep: 0, badRep: 0, completedSets: 0 },
-  // Detail ID: 9-12 for Friday
-  { detailID: 9, movementID: 4, totalSets: 5, totalReps: 8, goodRep: 0, badRep: 0, completedSets: 0 },
-  { detailID: 10, movementID: 5, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
-  { detailID: 11, movementID: 1, totalSets: 3, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
-  { detailID: 12, movementID: 2, totalSets: 4, totalReps: 12, goodRep: 0, badRep: 0, completedSets: 0 },
-]; */
-
 export const initialMovements = [
   {
     movementID: 1,

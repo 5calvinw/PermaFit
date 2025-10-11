@@ -76,7 +76,7 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ exerciseName, workoutPlan, in
           Bicep Curl
         </button>
         <button id="btn-squat" className="exercise-btn">
-          Squat
+          Stand to Sit
         </button>
         <button id="btn-wall_push_up" className="exercise-btn">
           Wall Push Up

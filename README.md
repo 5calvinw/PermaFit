@@ -113,10 +113,7 @@ Buka http://localhost:3000 di browser untuk melihat hasilnya.
 | ✅ | Onboarding dan Autentikasi Pengguna |
 | ✅ | Deteksi Pose Real-Time dengan MediaPipe |
 | ✅ | Dasbor dengan Analitik Latihan |
-| ✅ | Jadwal dan Sesi Latihan yang Telah Ditentukan |
-| ⏳ | *Direncanakan:* Personalisasi rencana latihan berbasis AI |
-| ⏳ | *Direncanakan:* Integrasi perintah suara (Web Speech API) |
-
+| ✅ | Jadwal yang bisa Ditentukan |
 ---
 
 ## Tim Pengembang  

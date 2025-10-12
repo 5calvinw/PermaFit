@@ -40,14 +40,14 @@ Atur jadwal latihan mingguan sesuai ketersediaan Anda saat proses onboarding unt
 ### 1. Onboarding  
 Pengguna baru menyelesaikan orientasi sederhana, memberikan informasi penting dan ketersediaan mingguan untuk mengatur jadwal awal.
 
-### 2. Beranda (Home)  
+### 2. Home
 Dasbor utama memberikan gambaran komprehensif tentang perjalanan kebugaran.  
 Menampilkan ringkasan latihan yang selesai, sesi yang terlewat, total repetisi yang benar, dan data performa historis.
 
-### 3. Jadwal Latihan  
+### 3. Workout Schedule
 Menampilkan rencana latihan mingguan Anda agar tetap teratur dan berkomitmen pada rutinitas.
 
-### 4. Sesi Latihan  
+### 4. Workout Session
 Inti dari PermaFit.  
 Selama sesi, aplikasi menggunakan kamera perangkat untuk memantau gerakan secara real-time.  
 Anda dapat melihat jadwal hari ini, melacak kemajuan, dan melihat pratinjau gerakan sebelum memulai.

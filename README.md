@@ -7,7 +7,9 @@ Dengan menggunakan **computer vision berbasis AI**, PermaFit bertindak sebagai p
 ---
 
 ## Tentang Proyek  
-Proyek ini dikembangkan untuk **Study 2 Challenge 2025: “Bridging Global Problems: Tech for a Better Tomorrow”**.
+Proyek ini menang **2nd Place Winner 🏆 Study 2 Challenge 2025: “Bridging Global Problems: Tech for a Better Tomorrow”**.
+
+
 
 ---
 
